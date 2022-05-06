@@ -6,7 +6,7 @@ using hlwSerial;
 
 namespace hlwSerialTest
 {
-    class foo : hlwSerializable
+    class foo : Serializable
     {
         [Serialize]public int lala { get; set; } = 32;
 
@@ -24,7 +24,7 @@ namespace hlwSerialTest
         }
     }
 
-    class stringFoo : hlwSerializable
+    class stringFoo : Serializable
     {
         [Serialize]public int random { get; set; }
         [Serialize]public string str { get; set; }
@@ -40,7 +40,7 @@ namespace hlwSerialTest
             
         }
     }
-    class bar : hlwSerializable
+    class bar : Serializable
     {
         [Serialize] public sbyte s { get; set; } = -90;
         [Serialize] public sbyte s2 { get; set; } = 30;

@@ -4,7 +4,7 @@ using System.Text;
 
 namespace hlwSerial
 {
-    public interface hlwSerializable
+    public interface Serializable
     {
 
         void PrepareSerialization();
