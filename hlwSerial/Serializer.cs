@@ -176,9 +176,6 @@ namespace hlwSerial
                     stream.Read(Size8, 0, 8);
                     propertyInfo.SetValue(inst, (ulong)BitConverter.ToUInt64(Size8, 0));
                 }
-
-
-
                 else if (propertyInfo.PropertyType == typeof(float))
                 {
                     stream.Read(Size4, 0, 4);
@@ -220,7 +217,7 @@ namespace hlwSerial
                     if (isNull) propertyInfo.SetValue(inst, null);
                     else
                     {
-                        propertyInfo.SetValue(inst,stream.Read(propertyInfo.GetType()));
+                        propertyInfo.SetValue(inst,stream.Read(propertyInfo.PropertyType));
                     }
                 }
 
