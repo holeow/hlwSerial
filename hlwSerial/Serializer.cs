@@ -125,7 +125,6 @@ namespace hlwSerial
             var inst = Activator.CreateInstance(T);
 
 
-
             foreach (var propertyInfo in GetPropertiesWithAttribute(inst.GetType()))
             {
 

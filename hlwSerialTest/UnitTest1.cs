@@ -24,6 +24,22 @@ namespace hlwSerialTest
         }
     }
 
+    class stringFoo : hlwSerializable
+    {
+        [Serialize]public int random { get; set; }
+        [Serialize]public string str { get; set; }
+        [Serialize]public double d { get; set; }
+
+        public void PrepareSerialization()
+        {
+            
+        }
+
+        public void AfterDeserialization()
+        {
+            
+        }
+    }
     class bar : hlwSerializable
     {
         [Serialize] public sbyte s { get; set; } = -90;
@@ -136,6 +152,68 @@ namespace hlwSerialTest
             var f2 = stream.Read<bar>();
 
             Assert.AreEqual(sbyte.MaxValue, f2.s3);
+        }
+
+
+        [TestMethod]
+        public void TestMultiple()
+        {
+            MemoryStream stream = new MemoryStream();
+            var s = new stringFoo();
+            s.str = "hello ";
+            stream.Write(s);
+            var s2 = new stringFoo();
+            s2.str = "world";
+            stream.Write(s2);
+
+            stream.Position = 0;
+            var ns = stream.Read<stringFoo>();
+            var ns2 = stream.Read<stringFoo>();
+
+            Assert.AreEqual("hello world",ns.str+ns2.str);
+        }
+    }
+
+    [TestClass]
+    public class TestsWithString
+    {
+        [TestMethod]
+        public void TestNullString()
+        {
+            MemoryStream stream = new MemoryStream();
+            var s = new stringFoo();
+            s.str = null;
+            stream.Write(s);
+            stream.Position = 0;
+
+            stringFoo result = stream.Read<stringFoo>();
+            Assert.AreEqual(null,result.str);
+        }
+
+        [TestMethod]
+        public void TestEmptyString()
+        {
+            MemoryStream stream = new MemoryStream();
+            var s = new stringFoo();
+            s.str = "";
+            stream.Write(s);
+            stream.Position = 0;
+
+            stringFoo result = stream.Read<stringFoo>();
+            Assert.AreEqual("", result.str);
+        }
+
+        [TestMethod]
+        public void TestFullString()
+        {
+            MemoryStream stream = new MemoryStream();
+            var s = new stringFoo();
+            s.str = "Hello world";
+            stream.Write(s);
+            stream.Position = 0;
+
+            stringFoo result = stream.Read<stringFoo>();
+            Assert.AreEqual("Hello world", result.str);
         }
     }
 }
