@@ -12,6 +12,8 @@ namespace hlwSerial
         private static readonly byte[] Size8 = new byte[8];
         private static readonly byte[] Size4 = new byte[4];
         private static readonly byte[] Size2 = new byte[2];
+        private static readonly byte[] Size1 = new byte[1];
+
 
 
         private static Dictionary<Type,PropertyInfo[]> infos = new Dictionary<Type,PropertyInfo[]>();
@@ -118,11 +120,11 @@ namespace hlwSerial
 
         }
 
-
-        public static T Read<T>(this Stream stream) where T : hlwSerializable
+        public static object Read(this Stream stream, Type T)
         {
-            var inst = Activator.CreateInstance<T>();
-            
+            var inst = Activator.CreateInstance(T);
+
+
 
             foreach (var propertyInfo in GetPropertiesWithAttribute(inst.GetType()))
             {
@@ -167,23 +169,75 @@ namespace hlwSerial
                 else if (propertyInfo.PropertyType == typeof(long))
                 {
                     stream.Read(Size8, 0, 8);
-                    propertyInfo.SetValue(inst, (long)BitConverter.ToInt32(Size8, 0));
+                    propertyInfo.SetValue(inst, (long)BitConverter.ToInt64(Size8, 0));
                 }
                 else if (propertyInfo.PropertyType == typeof(ulong))
                 {
                     stream.Read(Size8, 0, 8);
-                    propertyInfo.SetValue(inst, (ulong)BitConverter.ToInt32(Size8, 0));
+                    propertyInfo.SetValue(inst, (ulong)BitConverter.ToUInt64(Size8, 0));
                 }
 
 
 
+                else if (propertyInfo.PropertyType == typeof(float))
+                {
+                    stream.Read(Size4, 0, 4);
+                    propertyInfo.SetValue(inst, (float)BitConverter.ToSingle(Size4, 0));
+                }
+                else if (propertyInfo.PropertyType == typeof(double))
+                {
+                    stream.Read(Size8, 0, 8);
+                    propertyInfo.SetValue(inst, (double)BitConverter.ToDouble(Size8, 0));
+                }
+                else if (propertyInfo.PropertyType == typeof(bool))
+                {
+                    stream.Read(Size1, 0, 1);
+                    propertyInfo.SetValue(inst, (bool)BitConverter.ToBoolean(Size1, 0));
+                }
+                else if (propertyInfo.PropertyType == typeof(string))
+                {
+                    stream.Read(Size1, 0, 1);
+                    var isNull = BitConverter.ToBoolean(Size1, 0);
+                    if(isNull)propertyInfo.SetValue(inst,null);
+                    else
+                    {
+                        stream.Read(Size4, 0, 4);
+                        var size = BitConverter.ToInt32(Size4, 0);
+                        if(size<=0)propertyInfo.SetValue(inst,"");
+                        else
+                        {
+                            var by = new byte[size];
+                            stream.Read(by, 0, size);
+                            propertyInfo.SetValue(inst,Encoding.UTF8.GetString(by));
+                        }
+                    }
 
+                }
+                else if (typeof(hlwSerializable).IsAssignableFrom(propertyInfo.PropertyType))
+                {
+                    stream.Read(Size1, 0, 1);
+                    var isNull = BitConverter.ToBoolean(Size1, 0);
+                    if (isNull) propertyInfo.SetValue(inst, null);
+                    else
+                    {
+                        propertyInfo.SetValue(inst,stream.Read(propertyInfo.GetType()));
+                    }
+                }
 
-                
             }
-
-            inst.AfterDeserialization();
+            if (inst is hlwSerializable i2)
+                i2.AfterDeserialization();
             return inst;
+        }
+
+        public static T Read<T>(this Stream stream) where T : class
+        {
+            var inst = stream.Read(typeof(T));
+            
+
+
+            
+            return inst as T;
         }
 
         
