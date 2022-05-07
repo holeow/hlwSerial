@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -114,6 +115,87 @@ namespace hlwSerial
 
                 }
             }
+            else if (type.IsGenericType && typeof(Nullable<>) == type.GetGenericTypeDefinition())
+            {
+                var TT = Nullable.GetUnderlyingType(type);
+                if (TT == typeof(byte))
+                {
+                    var val = (byte?)value;
+                    stream.Write(typeof(bool), !val.HasValue);
+                    if(val.HasValue)
+                        stream.Write(TT, val.Value);
+                }
+                else if (TT == typeof(sbyte))
+                {
+                    var val = (sbyte?)value;
+                    stream.Write(typeof(bool), !val.HasValue);
+                    if (val.HasValue)
+                        stream.Write(TT, val.Value);
+                }
+                else if (TT == typeof(short))
+                {
+                    var val = (short?)value;
+                    stream.Write(typeof(bool), !val.HasValue);
+                    if (val.HasValue)
+                        stream.Write(TT, val.Value);
+                }
+                else if (TT == typeof(ushort))
+                {
+                    var val = (ushort?)value;
+                    stream.Write(typeof(bool), !val.HasValue);
+                    if (val.HasValue)
+                        stream.Write(TT, val.Value);
+                }
+                else if (TT == typeof(int))
+                {
+                    var val = (int?)value;
+                    stream.Write(typeof(bool), !val.HasValue);
+                    if (val.HasValue)
+                        stream.Write(TT, val.Value);
+                }
+                else if (TT == typeof(uint))
+                {
+                    var val = (uint?)value;
+                    stream.Write(typeof(bool), !val.HasValue);
+                    if (val.HasValue)
+                        stream.Write(TT, val.Value);
+                }
+                else if (TT == typeof(long))
+                {
+                    var val = (long?)value;
+                    stream.Write(typeof(bool), !val.HasValue);
+                    if (val.HasValue)
+                        stream.Write(TT, val.Value);
+                }
+                else if (TT == typeof(ulong))
+                {
+                    var val = (ulong?)value;
+                    stream.Write(typeof(bool), !val.HasValue);
+                    if (val.HasValue)
+                        stream.Write(TT, val.Value);
+                }
+                else if (TT == typeof(float))
+                {
+                    var val = (float?)value;
+                    stream.Write(typeof(bool), !val.HasValue);
+                    if (val.HasValue)
+                        stream.Write(TT, val.Value);
+                }
+                else if (TT == typeof(double))
+                {
+                    var val = (double?)value;
+                    stream.Write(typeof(bool), !val.HasValue);
+                    if (val.HasValue)
+                        stream.Write(TT, val.Value);
+                }
+                else if (TT == typeof(bool))
+                {
+                    var val = (bool?)value;
+                    stream.Write(typeof(bool), !val.HasValue);
+                    if (val.HasValue)
+                        stream.Write(TT, val.Value);
+                }
+            }
             else if (typeof(Array).IsAssignableFrom(type))
             {
                 var val = value as Array;
@@ -129,6 +211,49 @@ namespace hlwSerial
                             stream.Write(ty, VARIABLE);
                         }
                     }
+                }
+            }
+            else if (type.IsGenericType && typeof(List<>) == type.GetGenericTypeDefinition())
+            {
+                var val = value as IList;
+
+                stream.Write(typeof(bool), val == null);
+                if (val != null)
+                {
+
+                    stream.Write(typeof(int), val.Count);
+                    var ty = type.GetGenericArguments()[0];
+                    if (ty != null)
+                    {
+                        foreach (var VARIABLE in val)
+                        {
+                            stream.Write(ty, VARIABLE);
+                        }
+                    }
+                }
+
+                
+            }
+            else if (type.IsGenericType && typeof(Dictionary<,>) == type.GetGenericTypeDefinition())
+            {
+                var val = value as IDictionary;
+                stream.Write(typeof(bool), val == null);
+                if (val != null)
+                {
+
+                    stream.Write(typeof(int), val.Count);
+                    var ty1 = type.GetGenericArguments()[0];
+                    var ty2 = type.GetGenericArguments()[1];
+
+
+                        foreach (var VARIABLE in val.Keys)
+                        {
+                            stream.Write(ty1, VARIABLE);
+                        }
+                        foreach (var VARIABLE in val.Values)
+                        {
+                            stream.Write(ty2, VARIABLE);
+                        }
                 }
             }
         }
@@ -251,6 +376,60 @@ namespace hlwSerial
                     return stream.Read(T);
                 }
             }
+            else if (T.IsGenericType && typeof(Nullable<>) == T.GetGenericTypeDefinition())
+            {
+                var isNull = stream.ReadProperty<bool>();
+                if (isNull) return null;
+                else
+                {
+                    var TT = Nullable.GetUnderlyingType(T);
+                    if (TT == typeof(byte))
+                    {
+                        return (byte?)stream.ReadProperty<byte>();
+                    }
+                    else if (TT == typeof(sbyte))
+                    {
+                        return (sbyte?)stream.ReadProperty<sbyte>();
+                    }
+                    else if (TT == typeof(short))
+                    {
+                        return (short?)stream.ReadProperty<short>();
+                    }
+                    else if (TT == typeof(ushort))
+                    {
+                        return (ushort?)stream.ReadProperty<ushort>();
+                    }
+                    else if (TT == typeof(int))
+                    {
+                        return (int?)stream.ReadProperty<int>();
+                    }
+                    else if (TT == typeof(uint))
+                    {
+                        return (uint?)stream.ReadProperty<uint>();
+                    }
+                    else if (TT == typeof(long))
+                    {
+                        return (long?)stream.ReadProperty<long>();
+                    }
+                    else if (TT == typeof(ulong))
+                    {
+                        return (ulong?)stream.ReadProperty<ulong>();
+                    }
+                    else if (TT == typeof(float))
+                    {
+                        return (float?)stream.ReadProperty<float>();
+                    }
+                    else if (TT == typeof(double))
+                    {
+                        return (double?)stream.ReadProperty<double>();
+                    }
+                    else if (TT == typeof(bool))
+                    {
+                        return (bool?)stream.ReadProperty<bool>();
+                    }
+                    else return null;
+                }
+            }
             else if (typeof(Array).IsAssignableFrom(T))
             {
                 
@@ -267,6 +446,53 @@ namespace hlwSerial
                         array.SetValue(stream.ReadProperty(ty),i);
                     }
                     return array;
+                }
+            }
+            else if (T.IsGenericType && typeof(List<>) == T.GetGenericTypeDefinition())
+            {
+                var isNull = stream.ReadProperty<bool>();
+                if (isNull) return null;
+                else
+                {
+                    var ty = T.GetGenericArguments()[0];
+                    var size = stream.ReadProperty<int>();
+
+                    var List = Activator.CreateInstance(T) as IList;
+                    for (int i = 0; i < size; i++)
+                    {
+                        List.Add(stream.ReadProperty(ty));
+                    }
+                    return List;
+                }
+            }
+            else if (T.IsGenericType && typeof(Dictionary<,>) == T.GetGenericTypeDefinition())
+            {
+                var isNull = stream.ReadProperty<bool>();
+                if (isNull) return null;
+                else
+                {
+                    var ty1 = T.GetGenericArguments()[0];
+                    var ty2 = T.GetGenericArguments()[1];
+
+                    var Dict = Activator.CreateInstance(T) as IDictionary;
+                    List<object> keys = new List<object>();
+                    List<object> values = new List<object>();
+                    var size = stream.ReadProperty<int>();
+                    for (int i = 0; i < size; i++)
+                    {
+                        keys.Add(stream.ReadProperty(ty1));
+                    }
+
+                    for (int i = 0; i < size; i++)
+                    {
+                        values.Add(stream.ReadProperty(ty2));
+                    }
+                    for (int i = 0; i < size; i++)
+                    {
+                        Dict.Add(keys[i], values[i]);
+                    }
+
+                    return Dict;
                 }
             }
             else return null;
