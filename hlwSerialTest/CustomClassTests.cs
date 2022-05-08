@@ -6,7 +6,7 @@ using hlwSerial;
 
 namespace hlwSerialTest
 {
-    public class fooBar : Serializable
+    public class fooBar : ISerializable
     {
         [Serialize]public int n { get; set; }
         [Serialize]public float r { get; set; }
@@ -33,7 +33,7 @@ namespace hlwSerialTest
         }
     }
 
-    public class bigfoo : Serializable
+    public class bigfoo : ISerializable
     {
         [Serialize]public long l { get; set; }
         [Serialize]public fooBar f { get; set; }
@@ -68,12 +68,13 @@ namespace hlwSerialTest
         {
             bigfoo b = new bigfoo(999, new fooBar(15, 33.3f));
             Stream s = new MemoryStream();
+            Serializer ser = new Serializer(s);
 
-            s.Write(b);
+            ser.Write(b);
 
             s.Position = 0;
 
-            var b2 = s.Read<bigfoo>();
+            var b2 = ser.Read<bigfoo>();
 
             Assert.AreEqual(33.3f,b2.f.r);
 

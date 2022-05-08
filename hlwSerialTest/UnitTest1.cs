@@ -6,7 +6,7 @@ using hlwSerial;
 
 namespace hlwSerialTest
 {
-    class foo : Serializable
+    class foo : ISerializable
     {
         [Serialize]public int lala { get; set; } = 32;
 
@@ -24,7 +24,7 @@ namespace hlwSerialTest
         }
     }
 
-    class stringFoo : Serializable
+    class stringFoo : ISerializable
     {
         [Serialize]public int random { get; set; }
         [Serialize]public string str { get; set; }
@@ -40,7 +40,7 @@ namespace hlwSerialTest
             
         }
     }
-    class bar : Serializable
+    class bar : ISerializable
     {
         [Serialize] public sbyte s { get; set; } = -90;
         [Serialize] public sbyte s2 { get; set; } = 30;
@@ -57,9 +57,36 @@ namespace hlwSerialTest
         }
     }
 
+
+    public struct baz : ISerializable
+    {
+        [Serialize] public int integer { get; set; }
+        [Serialize] public int blob { get; set; }
+
+    }
+
+
     [TestClass]
     public class propertyTester
     {
+
+        [TestMethod]
+        public void WorksWithStruct()
+        {
+            MemoryStream stream = new MemoryStream();
+            Serializer serializer = new Serializer(stream);
+            var b = new baz();
+            b.blob = 12;
+            b.integer = 16;
+
+            serializer.Write(b);
+
+            stream.Position = 0;
+
+            var c = serializer.Read<baz>();
+            Assert.AreEqual(true, c.integer == 16 && c.blob == 12);
+        }
+
         [TestMethod]
         public void FooHasTwoPropertiesWithAttribute()
         {
@@ -85,9 +112,10 @@ namespace hlwSerialTest
         public void TestSerializeIntegers()
         {
             MemoryStream stream = new MemoryStream(8);
+            Serializer serializer = new Serializer(stream);
             var f = new foo();
             f.lala = 33;
-            stream.Write(f);
+            serializer.Write(f);
 
             using (var reader = new BinaryReader(stream))
             {
@@ -104,12 +132,13 @@ namespace hlwSerialTest
         public void TestDeserializeIntegers()
         {
             MemoryStream stream = new MemoryStream(8);
+            Serializer ser = new Serializer(stream);
             var f = new foo();
             f.lala = 33;
-            stream.Write(f);
+            ser.Write(f);
             stream.Position = 0;
 
-            var f2 = stream.Read<foo>();
+            var f2 = ser.Read<foo>();
 
             Assert.AreEqual(289, f2.lala + f2.lolo);
         }
@@ -118,12 +147,13 @@ namespace hlwSerialTest
         public void TestDeserializeSbyte1()
         {
             MemoryStream stream = new MemoryStream(8);
+            Serializer serializer = new Serializer(stream);
             var f = new bar();
             f.s = -80;
-            stream.Write(f);
-            stream.Position = 0;
+            serializer.Write(f);
+            serializer.Position = 0;
 
-            var f2 = stream.Read<bar>();
+            var f2 = serializer.Read<bar>();
 
             Assert.AreEqual(-80, f2.s);
         }
@@ -131,11 +161,12 @@ namespace hlwSerialTest
         public void TestDeserializeSbyte2()
         {
             MemoryStream stream = new MemoryStream(8);
+            Serializer serializer = new Serializer(stream);
             var f = new bar();
-            stream.Write(f);
-            stream.Position = 0;
+            serializer.Write(f);
+            serializer.Position = 0;
 
-            var f2 = stream.Read<bar>();
+            var f2 = serializer.Read<bar>();
 
             Assert.AreEqual(30, f2.s2);
         }
@@ -144,12 +175,13 @@ namespace hlwSerialTest
         public void TestDeserializeSbyte3()
         {
             MemoryStream stream = new MemoryStream(8);
+            Serializer ser = new Serializer(stream);
             var f = new bar();
 
-            stream.Write(f);
+            ser.Write(f);
             stream.Position = 0;
 
-            var f2 = stream.Read<bar>();
+            var f2 = ser.Read<bar>();
 
             Assert.AreEqual(sbyte.MaxValue, f2.s3);
         }
@@ -159,16 +191,18 @@ namespace hlwSerialTest
         public void TestMultiple()
         {
             MemoryStream stream = new MemoryStream();
+
+            Serializer ser = new Serializer(stream);
             var s = new stringFoo();
             s.str = "hello ";
-            stream.Write(s);
+            ser.Write(s);
             var s2 = new stringFoo();
             s2.str = "world";
-            stream.Write(s2);
+            ser.Write(s2);
 
             stream.Position = 0;
-            var ns = stream.Read<stringFoo>();
-            var ns2 = stream.Read<stringFoo>();
+            var ns = ser.Read<stringFoo>();
+            var ns2 = ser.Read<stringFoo>();
 
             Assert.AreEqual("hello world",ns.str+ns2.str);
         }
@@ -181,12 +215,13 @@ namespace hlwSerialTest
         public void TestNullString()
         {
             MemoryStream stream = new MemoryStream();
+            Serializer serializer = new Serializer(stream);
             var s = new stringFoo();
             s.str = null;
-            stream.Write(s);
+            serializer.Write(s);
             stream.Position = 0;
 
-            stringFoo result = stream.Read<stringFoo>();
+            stringFoo result = serializer.Read<stringFoo>();
             Assert.AreEqual(null,result.str);
         }
 
@@ -194,12 +229,13 @@ namespace hlwSerialTest
         public void TestEmptyString()
         {
             MemoryStream stream = new MemoryStream();
+            Serializer serializer = new Serializer(stream);
             var s = new stringFoo();
             s.str = "";
-            stream.Write(s);
+            serializer.Write(s);
             stream.Position = 0;
 
-            stringFoo result = stream.Read<stringFoo>();
+            stringFoo result = serializer.Read<stringFoo>();
             Assert.AreEqual("", result.str);
         }
 
@@ -207,12 +243,13 @@ namespace hlwSerialTest
         public void TestFullString()
         {
             MemoryStream stream = new MemoryStream();
+            Serializer ser = new Serializer(stream);
             var s = new stringFoo();
             s.str = "Hello world";
-            stream.Write(s);
+            ser.Write(s);
             stream.Position = 0;
 
-            stringFoo result = stream.Read<stringFoo>();
+            stringFoo result = ser.Read<stringFoo>();
             Assert.AreEqual("Hello world", result.str);
         }
     }

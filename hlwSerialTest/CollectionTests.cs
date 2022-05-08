@@ -8,7 +8,7 @@ using hlwSerial;
 
 namespace hlwSerialTest
 {
-    public class fooArray : Serializable
+    public class fooArray : ISerializable
     {
         [Serialize]public int n { get; set; }
         [Serialize]public float r { get; set; }
@@ -28,7 +28,7 @@ namespace hlwSerialTest
         
     }
 
-    public class FooList<T> : Serializable
+    public class FooList<T> : ISerializable
     {
         [Serialize] public int n { get; set; }
         [Serialize] public float r { get; set; }
@@ -47,7 +47,7 @@ namespace hlwSerialTest
     }
 
 
-    public class FooDict<T, Y> : Serializable
+    public class FooDict<T, Y> : ISerializable
     {
         [Serialize] public int n { get; set; }
         [Serialize] public float r { get; set; }
@@ -85,12 +85,13 @@ namespace hlwSerialTest
             fooArray c = new fooArray();
             c.array = new int[] { 1, 2, 3 };
             Stream s = new MemoryStream();
+            Serializer serializer = new Serializer(s);
 
-            s.Write(c);
+            serializer.Write(c);
             
             s.Position = 0;
 
-            var b2 = s.Read<fooArray>();
+            var b2 = serializer.Read<fooArray>();
 
             Assert.AreEqual(true, c.array[0] == 1 && c.array[1] == 2 && c.array[2] == 3);
         }
@@ -101,12 +102,12 @@ namespace hlwSerialTest
             FooList<int> c = new FooList<int>();
             c.list = new List<int>() { 1, 2, 3 };
             Stream s = new MemoryStream();
+            Serializer serializer = new Serializer(s);
+            serializer.Write(c);
 
-            s.Write(c);
+            serializer.Position = 0;
 
-            s.Position = 0;
-
-            var b2 = s.Read<FooList<int>>();
+            var b2 = serializer.Read<FooList<int>>();
 
             Assert.AreEqual(true, b2.list[0] == 1 && b2.list[1] == 2 && b2.list[2] == 3);
         }
@@ -121,12 +122,12 @@ namespace hlwSerialTest
             c.list.Add(99, "world");
 
             Stream s = new MemoryStream();
+            Serializer serializer = new Serializer(s);
+            serializer.Write(c);
 
-            s.Write(c);
+            serializer.Position = 0;
 
-            s.Position = 0;
-
-            var b2 = s.Read<FooDict<int,string>>();
+            var b2 = serializer.Read<FooDict<int,string>>();
 
             Assert.AreEqual("hello world", b2.list[21]+b2.list[99]);
         }

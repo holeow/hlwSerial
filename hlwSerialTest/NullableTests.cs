@@ -10,7 +10,7 @@ namespace hlwSerialTest
 {
 
 
-    public class foonull : Serializable
+    public class foonull : ISerializable
     {
         [Serialize]public int? integer { get; set; }
         [Serialize]public bool? boolean { get; set; }
@@ -20,16 +20,10 @@ namespace hlwSerialTest
 
         
 
-        public void PrepareSerialization()
-        {
-            
-        }
-
-        public void AfterDeserialization()
-        {
-        }
+        
     }
-    
+
+
 
     [TestClass]
     public class NullableTests
@@ -40,14 +34,16 @@ namespace hlwSerialTest
         {
             MemoryStream ms = new MemoryStream();
 
+            Serializer serializer = new Serializer(ms);
+            
             var foo = new foonull();
             foo.integer = 1;
             foo.boolean = null;
             foo.floating = 16.5f;
 
-            ms.Write(foo);
-            ms.Position = 0;
-            var foo2 = ms.Read<foonull>();
+            serializer.Write(foo);
+            serializer.Position = 0;
+            var foo2 = serializer.Read<foonull>();
             Assert.AreEqual(true, foo2.integer==1 && foo2.boolean==null && foo2.floating == 16.5f);
         }
 
