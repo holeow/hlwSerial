@@ -11,17 +11,6 @@ namespace hlwSerialTest
         [Serialize]public int lala { get; set; } = 32;
 
         [Serialize]public int lolo { get; set; } = 256;
-
-
-        public void AfterDeserialization()
-        {
-            
-        }
-
-        public void PrepareSerialization()
-        {
-            
-        }
     }
 
     class stringFoo : ISerializable
@@ -29,32 +18,12 @@ namespace hlwSerialTest
         [Serialize]public int random { get; set; }
         [Serialize]public string str { get; set; }
         [Serialize]public double d { get; set; }
-
-        public void PrepareSerialization()
-        {
-            
-        }
-
-        public void AfterDeserialization()
-        {
-            
-        }
     }
     class bar : ISerializable
     {
         [Serialize] public sbyte s { get; set; } = -90;
         [Serialize] public sbyte s2 { get; set; } = 30;
         [Serialize] public sbyte s3 { get; set; } = sbyte.MaxValue;
-
-
-
-        public void AfterDeserialization()
-        {
-        }
-
-        public void PrepareSerialization()
-        {
-        }
     }
 
 

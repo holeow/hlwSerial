@@ -14,18 +14,6 @@ namespace hlwSerialTest
         [Serialize]public float r { get; set; }
 
         [Serialize]public int[] array { get; set; }
-
-        public void PrepareSerialization()
-        {
-            
-        }
-
-        public void AfterDeserialization()
-        {
-
-        }
-
-        
     }
 
     public class FooList<T> : ISerializable
@@ -34,16 +22,6 @@ namespace hlwSerialTest
         [Serialize] public float r { get; set; }
 
         [Serialize] public List<T> list { get; set; }
-
-        public void PrepareSerialization()
-        {
-            
-        }
-
-        public void AfterDeserialization()
-        {
-            
-        }
     }
 
 
@@ -53,16 +31,6 @@ namespace hlwSerialTest
         [Serialize] public float r { get; set; }
 
         [Serialize] public Dictionary<T,Y> list { get; set; }
-
-        public void PrepareSerialization()
-        {
-
-        }
-
-        public void AfterDeserialization()
-        {
-
-        }
     }
     
 
