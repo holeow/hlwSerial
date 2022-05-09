@@ -15,12 +15,6 @@ namespace hlwSerialTest
         [Serialize]public int? integer { get; set; }
         [Serialize]public bool? boolean { get; set; }
         [Serialize]public float? floating { get; set; }
-
-        
-
-        
-
-        
     }
 
 

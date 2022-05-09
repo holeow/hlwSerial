@@ -39,22 +39,7 @@ namespace hlwSerialTest
     public class propertyTester
     {
 
-        [TestMethod]
-        public void WorksWithStruct()
-        {
-            MemoryStream stream = new MemoryStream();
-            Serializer serializer = new Serializer(stream);
-            var b = new baz();
-            b.blob = 12;
-            b.integer = 16;
-
-            serializer.Write(b);
-
-            stream.Position = 0;
-
-            var c = serializer.Read<baz>();
-            Assert.AreEqual(true, c.integer == 16 && c.blob == 12);
-        }
+       
 
         [TestMethod]
         public void FooHasTwoPropertiesWithAttribute()

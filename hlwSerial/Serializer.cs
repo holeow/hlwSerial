@@ -121,6 +121,21 @@ namespace hlwSerial
                 }
 
             }
+            else if (type == typeof(Type))
+            {
+                var val = (Type)value;
+                underlyingStream.Write(BitConverter.GetBytes(val == null), 0, 1);
+                if (val != null)
+                {
+                    var str = val.GetShortTypeName();
+
+                    var by = Encoding.UTF8.GetBytes(str);
+                    underlyingStream.Write(BitConverter.GetBytes(by.Length), 0, 4);
+                    underlyingStream.Write(by, 0, by.Length);
+                }
+                
+                
+            }
             else if (typeof(ISerializable).IsAssignableFrom(type))
             {
                 var val = value;
@@ -382,6 +397,24 @@ namespace hlwSerial
                     }
                 }
 
+            }
+            else if (T == typeof(Type))
+            {
+                underlyingStream.Read(Size1, 0, 1);
+                var isNull = BitConverter.ToBoolean(Size1, 0);
+                if (isNull) return null;
+                else
+                {
+                    underlyingStream.Read(Size4, 0, 4);
+                    var size = BitConverter.ToInt32(Size4, 0);
+                    if (size <= 0) return null;
+                    else
+                    {
+                        var by = new byte[size];
+                        underlyingStream.Read(by, 0, size);
+                        return Type.GetType( Encoding.UTF8.GetString(by));
+                    }
+                }
             }
             else if (typeof(ISerializable).IsAssignableFrom(T))
             {
