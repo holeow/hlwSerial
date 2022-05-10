@@ -69,15 +69,10 @@ namespace hlwSerialTest
             bigfoo b = new bigfoo(999, new fooBar(15, 33.3f));
             Stream s = new MemoryStream();
             Serializer ser = new Serializer(s);
-
             ser.Write(b);
-
             s.Position = 0;
-
             var b2 = ser.Read<bigfoo>();
-
             Assert.AreEqual(33.3f,b2.f.r);
-
         }
     }
 }
