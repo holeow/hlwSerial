@@ -35,14 +35,15 @@ namespace hlwSerial
         }
 
 
-        private static Dictionary<Type,PropertyInfo[]> infos = new Dictionary<Type,PropertyInfo[]>();
+        private static Dictionary<Type,CustomPropertyInfo[]> infos = new Dictionary<Type,CustomPropertyInfo[]>();
 
-        private static PropertyInfo[] GetPropertiesWithAttribute(Type T)
+        private static CustomPropertyInfo[] GetPropertiesWithAttribute(Type T)
         {
             if(infos.ContainsKey(T)) return infos[T];
             else
             {
-                infos.Add(T, T.GetProperties().Where(a => a.IsDefined(typeof(SerializeAttribute))).ToArray());
+
+                infos.Add(T, T.GetProperties().Where(a => a.IsDefined(typeof(SerializeAttribute))).Select(a=> new CustomPropertyInfo(a,a.GetCustomAttribute<SerializeAttribute>().SerializeType)).ToArray());
                 return infos[T];
             }
             
@@ -57,9 +58,9 @@ namespace hlwSerial
         {
             if (serializable is IPrepareSerialization s) s.PrepareSerialization();
             
-            foreach (var propertyInfo in GetPropertiesWithAttribute(serializable.GetType()))
+            foreach (var customPropertyInfo in GetPropertiesWithAttribute(serializable.GetType()))
             {
-                this.WriteProperty(propertyInfo.PropertyType,propertyInfo.GetValue(serializable));
+                this.WriteProperty(customPropertyInfo.PropertyInfo.PropertyType,customPropertyInfo.PropertyInfo.GetValue(serializable));
             }
         }
 
@@ -291,15 +292,29 @@ namespace hlwSerial
         }
 
 
-        public object Read( Type T)
+        public object Read( Type T, bool deserializeType = false)
         {
-            var inst = Activator.CreateInstance(T);
+            object inst;
+            if (deserializeType)
+            {
+                var newType = (Type)this.ReadProperty(typeof(Type));
+                if (newType == null || !T.IsAssignableFrom(newType)) return null;
+                else
+                {
+                    inst = Activator.CreateInstance(newType);
+                }
+            }
+            else
+            {
+                inst = Activator.CreateInstance(T);
+            }
+             
 
 
-            foreach (var propertyInfo in GetPropertiesWithAttribute(inst.GetType()))
+            foreach (var customPropertyInfo in GetPropertiesWithAttribute(inst.GetType()))
             {
 
-                propertyInfo.SetValue(inst,this.ReadProperty(propertyInfo.PropertyType));
+                customPropertyInfo.PropertyInfo.SetValue(inst,this.ReadProperty(customPropertyInfo.PropertyInfo.PropertyType));
 
             }
             if (inst is IAfterDeserialization i2)
