@@ -9,5 +9,11 @@ namespace hlwSerial
 
         public PropertyInfo PropertyInfo { get; set; }
         public bool SerializeType { get; set; }
+
+        public CustomPropertyInfo(PropertyInfo info, bool SerializeType)
+        {
+            this.PropertyInfo = info;
+            this.SerializeType = SerializeType;
+        }
     }
 }
