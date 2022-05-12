@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Security.Cryptography;
 using System.Text;
 
 namespace hlwSerial
@@ -47,7 +45,9 @@ namespace hlwSerial
                 infos.Add(T, T.GetProperties().Where(a => a.IsDefined(typeof(SerializeAttribute))).Select(a=>
                 {
                     SerializeAttribute attr = a.GetCustomAttribute<SerializeAttribute>();
-                    return new CustomPropertyInfo(a, attr.SerializeType,attr.SerializeElementsType);
+                    bool isnullable = a.PropertyType.IsGenericType &&
+                                      typeof(Nullable<>) == a.PropertyType.GetGenericTypeDefinition();
+                    return new CustomPropertyInfo(a, attr.SerializeType,attr.SerializeElementsType,isnullable);
                 }).ToArray());
                 return infos[T];
             }
@@ -55,18 +55,32 @@ namespace hlwSerial
         }
 
         /// <summary>
-        /// Writes the serializable object into the stream by writing each of its properties decorated with the SerializeAttribute attribute. 
+        /// Writes the serializable object into the stream by writing each of its properties decorated with the SerializeAttribute attribute. If the object is a implemented type, it will be serialized as well.
         /// </summary>
         /// <param name="stream">The stream to write the bytes into</param>
         /// <param name="serializable">The object to serialize</param>
-        public void Write(object serializable)
+        public void Write(object serializable, bool SerializeType = false, bool SerializeElementsType = false, bool nullable = false)
         {
-            if (serializable is IPrepareSerialization s) s.PrepareSerialization();
-            
-            foreach (var customPropertyInfo in GetPropertiesWithAttribute(serializable.GetType()))
+            if (serializable is ISerializable ss)
             {
-                this.WriteProperty(customPropertyInfo.PropertyInfo.GetValue(serializable));
+                if (serializable is IPrepareSerialization s) s.PrepareSerialization();
+
+                if (SerializeType)
+                {
+                    WriteProperty(serializable.GetType());
+                }
+
+                foreach (var customPropertyInfo in GetPropertiesWithAttribute(serializable.GetType()))
+                {
+                    this.WriteProperty(customPropertyInfo.PropertyInfo.GetValue(serializable),customPropertyInfo.SerializeType,customPropertyInfo.SerializeElementsType,customPropertyInfo.Nullable);
+                }
             }
+            else
+            {
+                WriteProperty(serializable,SerializeType,SerializeElementsType, nullable);
+            }
+
+            
         }
 
         private void WriteProperty(object value, bool SerializeType = false, bool SerializeElementsType = false,bool nullable = false)
@@ -87,6 +101,10 @@ namespace hlwSerial
                 {
                     WriteProperty(true);
                     return;
+                }
+                else if (value != null && nullable)
+                {
+                    WriteProperty(false);
                 }
             }
 
@@ -137,7 +155,7 @@ namespace hlwSerial
             else if (type == typeof(string))
             {
                 var val = (string)value;
-                if (!SerializeType)
+                if (!SerializeType && !nullable)
                     underlyingStream.Write(BitConverter.GetBytes(val == null), 0, 1);
                 if (val != null)
                 {
@@ -150,7 +168,7 @@ namespace hlwSerial
             else if (type == typeof(Type))
             {
                 var val = (Type)value;
-                if(!SerializeType)
+                if(!SerializeType && !nullable)
                     underlyingStream.Write(BitConverter.GetBytes(val == null), 0, 1);
                 if (val != null)
                 {
@@ -166,7 +184,7 @@ namespace hlwSerial
             else if (typeof(ISerializable).IsAssignableFrom(type))
             {
                 var val = value;
-                if (!SerializeType)
+                if (!SerializeType && !nullable)
                     underlyingStream.Write(BitConverter.GetBytes(val == null), 0, 1);
                 if (val != null)
                 {
@@ -183,7 +201,7 @@ namespace hlwSerial
                 if (TT == typeof(byte))
                 {
                     var val = (byte?)value;
-                    if (!SerializeType)
+                    if (!SerializeType && !nullable)
                         this.WriteProperty(!val.HasValue);
                     if(val.HasValue)
                         this.WriteProperty(val.Value);
@@ -191,7 +209,7 @@ namespace hlwSerial
                 else if (TT == typeof(sbyte))
                 {
                     var val = (sbyte?)value;
-                    if (!SerializeType)
+                    if (!SerializeType && !nullable)
                         this.WriteProperty(!val.HasValue);
                     if (val.HasValue)
                         this.WriteProperty(val.Value);
@@ -199,7 +217,7 @@ namespace hlwSerial
                 else if (TT == typeof(short))
                 {
                     var val = (short?)value;
-                    if (!SerializeType)
+                    if (!SerializeType && !nullable)
                         this.WriteProperty(!val.HasValue);
                     if (val.HasValue)
                         this.WriteProperty( val.Value);
@@ -207,7 +225,7 @@ namespace hlwSerial
                 else if (TT == typeof(ushort))
                 {
                     var val = (ushort?)value;
-                    if (!SerializeType)
+                    if (!SerializeType && !nullable)
                         this.WriteProperty( !val.HasValue);
                     if (val.HasValue)
                         this.WriteProperty( val.Value);
@@ -215,7 +233,7 @@ namespace hlwSerial
                 else if (TT == typeof(int))
                 {
                     var val = (int?)value;
-                    if (!SerializeType)
+                    if (!SerializeType && !nullable)
                         this.WriteProperty( !val.HasValue);
                     if (val.HasValue)
                         this.WriteProperty(val.Value);
@@ -223,7 +241,7 @@ namespace hlwSerial
                 else if (TT == typeof(uint))
                 {
                     var val = (uint?)value;
-                    if (!SerializeType)
+                    if (!SerializeType && !nullable)
                         this.WriteProperty(!val.HasValue);
                     if (val.HasValue)
                         this.WriteProperty(val.Value);
@@ -231,7 +249,7 @@ namespace hlwSerial
                 else if (TT == typeof(long))
                 {
                     var val = (long?)value;
-                    if (!SerializeType)
+                    if (!SerializeType && !nullable)
                         this.WriteProperty(!val.HasValue);
                     if (val.HasValue)
                         this.WriteProperty(val.Value);
@@ -239,7 +257,7 @@ namespace hlwSerial
                 else if (TT == typeof(ulong))
                 {
                     var val = (ulong?)value;
-                    if (!SerializeType)
+                    if (!SerializeType && !nullable)
                         this.WriteProperty(!val.HasValue);
                     if (val.HasValue)
                         this.WriteProperty( val.Value);
@@ -247,7 +265,7 @@ namespace hlwSerial
                 else if (TT == typeof(float))
                 {
                     var val = (float?)value;
-                    if (!SerializeType)
+                    if (!SerializeType && !nullable)
                         this.WriteProperty(!val.HasValue);
                     if (val.HasValue)
                         this.WriteProperty(val.Value);
@@ -255,7 +273,7 @@ namespace hlwSerial
                 else if (TT == typeof(double))
                 {
                     var val = (double?)value;
-                    if (!SerializeType)
+                    if (!SerializeType && !nullable)
                         this.WriteProperty(!val.HasValue);
                     if (val.HasValue)
                         this.WriteProperty(val.Value);
@@ -263,7 +281,7 @@ namespace hlwSerial
                 else if (TT == typeof(bool))
                 {
                     var val = (bool?)value;
-                    if (!SerializeType)
+                    if (!SerializeType && !nullable)
                         this.WriteProperty(!val.HasValue);
                     if (val.HasValue)
                         this.WriteProperty(val.Value);
@@ -272,7 +290,7 @@ namespace hlwSerial
             else if (typeof(Array).IsAssignableFrom(type))
             {
                 var val = value as Array;
-                if (!SerializeType)
+                if (!SerializeType && !nullable)
                     underlyingStream.Write(BitConverter.GetBytes(val == null), 0, 1);
                 if (val != null)
                 {
@@ -290,7 +308,7 @@ namespace hlwSerial
             else if (type.IsGenericType && typeof(List<>) == type.GetGenericTypeDefinition())
             {
                 var val = value as IList;
-                if (!SerializeType)
+                if (!SerializeType && !nullable)
                     this.WriteProperty(val == null);
                 if (val != null)
                 {
@@ -311,7 +329,7 @@ namespace hlwSerial
             else if (type.IsGenericType && typeof(Dictionary<,>) == type.GetGenericTypeDefinition())
             {
                 var val = value as IDictionary;
-                if (!SerializeType)
+                if (!SerializeType && !nullable)
                     this.WriteProperty(val == null);
                 if (val != null)
                 {

@@ -47,9 +47,10 @@ namespace hlwSerialTest
 
             byte[] bytes = ms.ToArray();
 
+            Trace.WriteLine(String.Join(" ",bytes.Select(a=> a.ToString())));
             serializer.Position = 0;
             var foo2 = serializer.Read<foonull>();
-            Assert.AreEqual(true, foo2.integer == 1 && foo2.boolean == true && foo2.floating == 16.5f);
+            Assert.AreEqual(true, foo2.integer == 3 && foo2.boolean == true && foo2.floating == 16.5f);
         }
 
         [TestMethod]
