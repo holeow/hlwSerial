@@ -6,5 +6,6 @@ namespace hlwSerial
     public class SerializeAttribute : Attribute
     {
         public bool SerializeType = false;
+        public bool SerializeElementsType = false;
     }
 }

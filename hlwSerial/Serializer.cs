@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -43,7 +44,11 @@ namespace hlwSerial
             else
             {
 
-                infos.Add(T, T.GetProperties().Where(a => a.IsDefined(typeof(SerializeAttribute))).Select(a=> new CustomPropertyInfo(a,a.GetCustomAttribute<SerializeAttribute>().SerializeType)).ToArray());
+                infos.Add(T, T.GetProperties().Where(a => a.IsDefined(typeof(SerializeAttribute))).Select(a=>
+                {
+                    SerializeAttribute attr = a.GetCustomAttribute<SerializeAttribute>();
+                    return new CustomPropertyInfo(a, attr.SerializeType,attr.SerializeElementsType);
+                }).ToArray());
                 return infos[T];
             }
             
@@ -60,12 +65,31 @@ namespace hlwSerial
             
             foreach (var customPropertyInfo in GetPropertiesWithAttribute(serializable.GetType()))
             {
-                this.WriteProperty(customPropertyInfo.PropertyInfo.PropertyType,customPropertyInfo.PropertyInfo.GetValue(serializable));
+                this.WriteProperty(customPropertyInfo.PropertyInfo.GetValue(serializable));
             }
         }
 
-        private void WriteProperty(Type type, object value)
+        private void WriteProperty(object value, bool SerializeType = false, bool SerializeElementsType = false,bool nullable = false)
         {
+
+            var type = value == null ? null : value.GetType();
+            if (SerializeType)
+            {
+                WriteProperty(type == null);
+                if(type!=null)
+                    WriteProperty(type);
+                if (type == null) return;
+            }
+            else
+            {
+
+                if (value == null)
+                {
+                    WriteProperty(true);
+                    return;
+                }
+            }
+
             if (type == typeof(byte))
             {
                 underlyingStream.WriteByte((byte)value);
@@ -113,7 +137,8 @@ namespace hlwSerial
             else if (type == typeof(string))
             {
                 var val = (string)value;
-                underlyingStream.Write(BitConverter.GetBytes(val == null), 0, 1);
+                if (!SerializeType)
+                    underlyingStream.Write(BitConverter.GetBytes(val == null), 0, 1);
                 if (val != null)
                 {
                     var by = Encoding.UTF8.GetBytes(val);
@@ -125,7 +150,8 @@ namespace hlwSerial
             else if (type == typeof(Type))
             {
                 var val = (Type)value;
-                underlyingStream.Write(BitConverter.GetBytes(val == null), 0, 1);
+                if(!SerializeType)
+                    underlyingStream.Write(BitConverter.GetBytes(val == null), 0, 1);
                 if (val != null)
                 {
                     var str = val.GetShortTypeName();
@@ -140,7 +166,8 @@ namespace hlwSerial
             else if (typeof(ISerializable).IsAssignableFrom(type))
             {
                 var val = value;
-                underlyingStream.Write(BitConverter.GetBytes(val == null), 0, 1);
+                if (!SerializeType)
+                    underlyingStream.Write(BitConverter.GetBytes(val == null), 0, 1);
                 if (val != null)
                 {
 
@@ -150,98 +177,112 @@ namespace hlwSerial
             }
             else if (type.IsGenericType && typeof(Nullable<>) == type.GetGenericTypeDefinition())
             {
+                
+
                 var TT = Nullable.GetUnderlyingType(type);
                 if (TT == typeof(byte))
                 {
                     var val = (byte?)value;
-                    this.WriteProperty(typeof(bool), !val.HasValue);
+                    if (!SerializeType)
+                        this.WriteProperty(!val.HasValue);
                     if(val.HasValue)
-                        this.WriteProperty(TT, val.Value);
+                        this.WriteProperty(val.Value);
                 }
                 else if (TT == typeof(sbyte))
                 {
                     var val = (sbyte?)value;
-                    this.WriteProperty(typeof(bool), !val.HasValue);
+                    if (!SerializeType)
+                        this.WriteProperty(!val.HasValue);
                     if (val.HasValue)
-                        this.WriteProperty(TT, val.Value);
+                        this.WriteProperty(val.Value);
                 }
                 else if (TT == typeof(short))
                 {
                     var val = (short?)value;
-                    this.WriteProperty(typeof(bool), !val.HasValue);
+                    if (!SerializeType)
+                        this.WriteProperty(!val.HasValue);
                     if (val.HasValue)
-                        this.WriteProperty(TT, val.Value);
+                        this.WriteProperty( val.Value);
                 }
                 else if (TT == typeof(ushort))
                 {
                     var val = (ushort?)value;
-                    this.WriteProperty(typeof(bool), !val.HasValue);
+                    if (!SerializeType)
+                        this.WriteProperty( !val.HasValue);
                     if (val.HasValue)
-                        this.WriteProperty(TT, val.Value);
+                        this.WriteProperty( val.Value);
                 }
                 else if (TT == typeof(int))
                 {
                     var val = (int?)value;
-                    this.WriteProperty(typeof(bool), !val.HasValue);
+                    if (!SerializeType)
+                        this.WriteProperty( !val.HasValue);
                     if (val.HasValue)
-                        this.WriteProperty(TT, val.Value);
+                        this.WriteProperty(val.Value);
                 }
                 else if (TT == typeof(uint))
                 {
                     var val = (uint?)value;
-                    this.WriteProperty(typeof(bool), !val.HasValue);
+                    if (!SerializeType)
+                        this.WriteProperty(!val.HasValue);
                     if (val.HasValue)
-                        this.WriteProperty(TT, val.Value);
+                        this.WriteProperty(val.Value);
                 }
                 else if (TT == typeof(long))
                 {
                     var val = (long?)value;
-                    this.WriteProperty(typeof(bool), !val.HasValue);
+                    if (!SerializeType)
+                        this.WriteProperty(!val.HasValue);
                     if (val.HasValue)
-                        this.WriteProperty(TT, val.Value);
+                        this.WriteProperty(val.Value);
                 }
                 else if (TT == typeof(ulong))
                 {
                     var val = (ulong?)value;
-                    this.WriteProperty(typeof(bool), !val.HasValue);
+                    if (!SerializeType)
+                        this.WriteProperty(!val.HasValue);
                     if (val.HasValue)
-                        this.WriteProperty(TT, val.Value);
+                        this.WriteProperty( val.Value);
                 }
                 else if (TT == typeof(float))
                 {
                     var val = (float?)value;
-                    this.WriteProperty(typeof(bool), !val.HasValue);
+                    if (!SerializeType)
+                        this.WriteProperty(!val.HasValue);
                     if (val.HasValue)
-                        this.WriteProperty(TT, val.Value);
+                        this.WriteProperty(val.Value);
                 }
                 else if (TT == typeof(double))
                 {
                     var val = (double?)value;
-                    this.WriteProperty(typeof(bool), !val.HasValue);
+                    if (!SerializeType)
+                        this.WriteProperty(!val.HasValue);
                     if (val.HasValue)
-                        this.WriteProperty(TT, val.Value);
+                        this.WriteProperty(val.Value);
                 }
                 else if (TT == typeof(bool))
                 {
                     var val = (bool?)value;
-                    this.WriteProperty(typeof(bool), !val.HasValue);
+                    if (!SerializeType)
+                        this.WriteProperty(!val.HasValue);
                     if (val.HasValue)
-                        this.WriteProperty(TT, val.Value);
+                        this.WriteProperty(val.Value);
                 }
             }
             else if (typeof(Array).IsAssignableFrom(type))
             {
                 var val = value as Array;
-                underlyingStream.Write(BitConverter.GetBytes(val == null), 0, 1);
+                if (!SerializeType)
+                    underlyingStream.Write(BitConverter.GetBytes(val == null), 0, 1);
                 if (val != null)
                 {
                     var ty = type.GetElementType();
                     if (ty != null)
                     {
-                        this.WriteProperty(typeof(int), val.Length);
+                        this.WriteProperty(val.Length);
                         foreach (var VARIABLE in val)
                         {
-                            this.WriteProperty(ty, VARIABLE);
+                            this.WriteProperty(VARIABLE,SerializeElementsType);
                         }
                     }
                 }
@@ -249,18 +290,18 @@ namespace hlwSerial
             else if (type.IsGenericType && typeof(List<>) == type.GetGenericTypeDefinition())
             {
                 var val = value as IList;
-
-                this.WriteProperty(typeof(bool), val == null);
+                if (!SerializeType)
+                    this.WriteProperty(val == null);
                 if (val != null)
                 {
 
-                    this.WriteProperty(typeof(int), val.Count);
+                    this.WriteProperty(val.Count);
                     var ty = type.GetGenericArguments()[0];
                     if (ty != null)
                     {
                         foreach (var VARIABLE in val)
                         {
-                            this.WriteProperty(ty, VARIABLE);
+                            this.WriteProperty(VARIABLE,SerializeElementsType);
                         }
                     }
                 }
@@ -270,68 +311,85 @@ namespace hlwSerial
             else if (type.IsGenericType && typeof(Dictionary<,>) == type.GetGenericTypeDefinition())
             {
                 var val = value as IDictionary;
-                this.WriteProperty(typeof(bool), val == null);
+                if (!SerializeType)
+                    this.WriteProperty(val == null);
                 if (val != null)
                 {
 
-                    this.WriteProperty(typeof(int), val.Count);
+                    this.WriteProperty(val.Count);
                     var ty1 = type.GetGenericArguments()[0];
                     var ty2 = type.GetGenericArguments()[1];
 
 
                         foreach (var VARIABLE in val.Keys)
                         {
-                            this.WriteProperty(ty1, VARIABLE);
+                            this.WriteProperty(VARIABLE,SerializeElementsType);
                         }
                         foreach (var VARIABLE in val.Values)
                         {
-                            this.WriteProperty(ty2, VARIABLE);
+                            this.WriteProperty(VARIABLE,SerializeElementsType);
                         }
                 }
             }
         }
 
 
-        public object Read( Type T, bool deserializeType = false)
+        public object Read( Type T, bool deserializeType = false, bool deserializeElementsType = false)
         {
-            object inst;
-            if (deserializeType)
+            
+
+
+            if (typeof(ISerializable).IsAssignableFrom(T))
             {
-                var newType = (Type)this.ReadProperty(typeof(Type));
-                if (newType == null || !T.IsAssignableFrom(newType)) return null;
+                object inst;
+                if (deserializeType)
+                {
+                    var newType = (Type)this.ReadProperty(typeof(Type));
+                    if (newType == null || !T.IsAssignableFrom(newType)) return null;
+                    else
+                    {
+                        inst = Activator.CreateInstance(newType);
+                    }
+                }
                 else
                 {
-                    inst = Activator.CreateInstance(newType);
+                    inst = Activator.CreateInstance(T);
                 }
+                foreach (var customPropertyInfo in GetPropertiesWithAttribute(inst.GetType()))
+                {
+
+                    customPropertyInfo.PropertyInfo.SetValue(inst, this.ReadProperty(customPropertyInfo.PropertyInfo.PropertyType, customPropertyInfo.SerializeType, customPropertyInfo.SerializeElementsType));
+
+                }
+                if (inst is IAfterDeserialization i2)
+                    i2.AfterDeserialization();
+                return inst;
             }
             else
             {
-                inst = Activator.CreateInstance(T);
+                return ReadProperty(T,deserializeType,deserializeElementsType);
             }
-             
-
-
-            foreach (var customPropertyInfo in GetPropertiesWithAttribute(inst.GetType()))
-            {
-
-                customPropertyInfo.PropertyInfo.SetValue(inst,this.ReadProperty(customPropertyInfo.PropertyInfo.PropertyType));
-
-            }
-            if (inst is IAfterDeserialization i2)
-                i2.AfterDeserialization();
-            return inst;
+            
+            
         }
 
-        public T ReadProperty<T>()
+        public T ReadProperty<T>(bool DeserializeType = false, bool DeserializeElementType = false)
         {
-            if (this.ReadProperty(typeof(T)) is T val)
+            if (this.ReadProperty(typeof(T),DeserializeType,DeserializeElementType) is T val)
                 return val;
             else return default(T);
             
         }
 
-        public object ReadProperty(Type T)
+        public object ReadProperty(Type T, bool DeserializeType = false, bool DeserializeElementsType = false)
         {
+            if (DeserializeType)
+            {
+                var newType = ReadProperty<Type>();
+                if (newType == null || !T.IsAssignableFrom(newType)) return null;
+                else T = newType;
+            }
+
             if (T == typeof(byte))
             {
                 var b = underlyingStream.ReadByte();
@@ -396,8 +454,18 @@ namespace hlwSerial
             }
             else if (T == typeof(string))
             {
-                underlyingStream.Read(Size1, 0, 1);
-                var isNull = BitConverter.ToBoolean(Size1, 0);
+                bool isNull;
+                if (!DeserializeType)
+                {
+                    underlyingStream.Read(Size1, 0, 1);
+                    isNull = BitConverter.ToBoolean(Size1, 0);
+                }
+                else
+                {
+                    isNull = false;
+                }
+
+                
                 if (isNull) return null;
                 else
                 {
@@ -415,8 +483,16 @@ namespace hlwSerial
             }
             else if (T == typeof(Type))
             {
-                underlyingStream.Read(Size1, 0, 1);
-                var isNull = BitConverter.ToBoolean(Size1, 0);
+                bool isNull;
+                if (!DeserializeType)
+                {
+                    underlyingStream.Read(Size1, 0, 1);
+                    isNull = BitConverter.ToBoolean(Size1, 0);
+                }
+                else
+                {
+                    isNull = false;
+                }
                 if (isNull) return null;
                 else
                 {
@@ -433,8 +509,16 @@ namespace hlwSerial
             }
             else if (typeof(ISerializable).IsAssignableFrom(T))
             {
-                underlyingStream.Read(Size1, 0, 1);
-                var isNull = BitConverter.ToBoolean(Size1, 0);
+                bool isNull;
+                if (!DeserializeType)
+                {
+                    underlyingStream.Read(Size1, 0, 1);
+                    isNull = BitConverter.ToBoolean(Size1, 0);
+                }
+                else
+                {
+                    isNull = false;
+                }
                 if (isNull) return null;
                 else
                 {
@@ -443,7 +527,16 @@ namespace hlwSerial
             }
             else if (T.IsGenericType && typeof(Nullable<>) == T.GetGenericTypeDefinition())
             {
-                var isNull = this.ReadProperty<bool>();
+                bool isNull;
+                if (!DeserializeType)
+                {
+                    underlyingStream.Read(Size1, 0, 1);
+                    isNull = BitConverter.ToBoolean(Size1, 0);
+                }
+                else
+                {
+                    isNull = false;
+                }
                 if (isNull) return null;
                 else
                 {
@@ -497,8 +590,17 @@ namespace hlwSerial
             }
             else if (typeof(Array).IsAssignableFrom(T))
             {
-                
-                var isNull = this.ReadProperty<bool>();
+
+                bool isNull;
+                if (!DeserializeType)
+                {
+                    underlyingStream.Read(Size1, 0, 1);
+                    isNull = BitConverter.ToBoolean(Size1, 0);
+                }
+                else
+                {
+                    isNull = false;
+                }
                 if (isNull) return null;
                 else
                 {
@@ -515,7 +617,16 @@ namespace hlwSerial
             }
             else if (T.IsGenericType && typeof(List<>) == T.GetGenericTypeDefinition())
             {
-                var isNull = this.ReadProperty<bool>();
+                bool isNull;
+                if (!DeserializeType)
+                {
+                    underlyingStream.Read(Size1, 0, 1);
+                    isNull = BitConverter.ToBoolean(Size1, 0);
+                }
+                else
+                {
+                    isNull = false;
+                }
                 if (isNull) return null;
                 else
                 {
@@ -532,7 +643,16 @@ namespace hlwSerial
             }
             else if (T.IsGenericType && typeof(Dictionary<,>) == T.GetGenericTypeDefinition())
             {
-                var isNull = this.ReadProperty<bool>();
+                bool isNull;
+                if (!DeserializeType)
+                {
+                    underlyingStream.Read(Size1, 0, 1);
+                    isNull = BitConverter.ToBoolean(Size1, 0);
+                }
+                else
+                {
+                    isNull = false;
+                }
                 if (isNull) return null;
                 else
                 {
@@ -563,9 +683,9 @@ namespace hlwSerial
             else return null;
         }
 
-        public T Read<T>()
+        public T Read<T>(bool DeserializeType = false, bool DeserializeElementsType = false)
         {
-            var inst = this.Read(typeof(T));
+            var inst = this.Read(typeof(T),DeserializeType,DeserializeElementsType);
 
 
             if (inst is T tt) return tt;
