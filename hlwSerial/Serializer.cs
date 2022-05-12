@@ -36,7 +36,7 @@ namespace hlwSerial
 
         private static Dictionary<Type,CustomPropertyInfo[]> infos = new Dictionary<Type,CustomPropertyInfo[]>();
 
-        private static CustomPropertyInfo[] GetPropertiesWithAttribute(Type T)
+        public static CustomPropertyInfo[] GetPropertiesWithAttribute(Type T)
         {
             if(infos.ContainsKey(T)) return infos[T];
             else
@@ -89,9 +89,10 @@ namespace hlwSerial
             var type = value == null ? null : value.GetType();
             if (SerializeType)
             {
-                WriteProperty(type == null);
+                //WriteProperty(type == null);
                 if(type!=null)
                     WriteProperty(type);
+                if(type==null)WriteProperty(true);
                 if (type == null) return;
             }
             else
@@ -165,16 +166,19 @@ namespace hlwSerial
                 }
 
             }
-            else if (type == typeof(Type))
+            else if (typeof(Type).IsAssignableFrom(type))
             {
                 var val = (Type)value;
-                if(!SerializeType && !nullable)
+                
+
+                if (!SerializeType && !nullable)
                     underlyingStream.Write(BitConverter.GetBytes(val == null), 0, 1);
                 if (val != null)
                 {
                     var str = val.GetShortTypeName();
 
                     var by = Encoding.UTF8.GetBytes(str);
+                    Console.WriteLine($"In write > Type > by.Length = {by.Length}");
                     underlyingStream.Write(BitConverter.GetBytes(by.Length), 0, 4);
                     underlyingStream.Write(by, 0, by.Length);
                 }
@@ -506,21 +510,30 @@ namespace hlwSerial
                 {
                     underlyingStream.Read(Size1, 0, 1);
                     isNull = BitConverter.ToBoolean(Size1, 0);
+
+                    Console.WriteLine($"In read type : > DeserializeType isNull={isNull}");
                 }
                 else
                 {
                     isNull = false;
                 }
+                Console.WriteLine($"In read type : > isNull={isNull}");
                 if (isNull) return null;
                 else
                 {
+                    //DEBUG
+                    //underlyingStream.Read(Size1, 0, 1);
+                    //DEBUG
+
                     underlyingStream.Read(Size4, 0, 4);
                     var size = BitConverter.ToInt32(Size4, 0);
+                    Console.WriteLine($"In read type : > size={size}");
                     if (size <= 0) return null;
                     else
                     {
                         var by = new byte[size];
                         underlyingStream.Read(by, 0, size);
+                        Console.WriteLine($"In read type : > type seems to be=[{Encoding.UTF8.GetString(by)}]");
                         return Type.GetType( Encoding.UTF8.GetString(by));
                     }
                 }
@@ -705,6 +718,7 @@ namespace hlwSerial
         {
             var inst = this.Read(typeof(T),DeserializeType,DeserializeElementsType);
 
+            
 
             if (inst is T tt) return tt;
             else return default;
