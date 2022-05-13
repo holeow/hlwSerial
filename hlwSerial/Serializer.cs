@@ -16,7 +16,10 @@ namespace hlwSerial
         private readonly byte[] Size1 = new byte[1];
 
         public Stream underlyingStream;
-
+        
+        /// <summary>
+        /// Gets or set the position of the underlying stream.
+        /// </summary>
         public long Position
         {
             get
@@ -83,12 +86,15 @@ namespace hlwSerial
             
         }
 
+
         private void WriteProperty(object value, bool SerializeType = false, bool SerializeElementsType = false,bool nullable = false)
         {
-
+            //? Type writing if serializeType
+            #region type writing
             var type = value == null ? null : value.GetType();
             if (SerializeType)
             {
+                //todo rewrite this mess
                 if(type!=null)
                     WriteProperty(type);
                 if(type==null)WriteProperty(true);
@@ -107,7 +113,13 @@ namespace hlwSerial
                     WriteProperty(false);
                 }
             }
+            #endregion
 
+            //? TYPE CHECKS AND WRITE
+            //todo Remake this with a more "object oriented approach and less if else if
+
+            //? Primary Types
+            #region
             if (type == typeof(byte))
             {
                 underlyingStream.WriteByte((byte)value);
@@ -152,6 +164,9 @@ namespace hlwSerial
             {
                 underlyingStream.Write(BitConverter.GetBytes((bool)value), 0, 1);
             }
+            #endregion
+            //? STRING
+            #region
             else if (type == typeof(string))
             {
                 var val = (string)value;
@@ -165,6 +180,9 @@ namespace hlwSerial
                 }
 
             }
+            #endregion
+            //? REFERENCE TYPES
+            #region
             else if (typeof(Type).IsAssignableFrom(type))
             {
                 var val = (Type)value;
@@ -195,6 +213,10 @@ namespace hlwSerial
 
                 }
             }
+            //?Check for nullable
+            //x  Could be deleted?
+            #region nullable
+            /*
             else if (type.IsGenericType && typeof(Nullable<>) == type.GetGenericTypeDefinition())
             {
                 
@@ -288,7 +310,10 @@ namespace hlwSerial
                     if (val.HasValue)
                         this.WriteProperty(val.Value);
                 }
-            }
+            }*/
+            #endregion nullable
+            //? COLLECTIONS
+            #region collections
             else if (typeof(Array).IsAssignableFrom(type))
             {
                 var val = value as Array;
@@ -351,6 +376,8 @@ namespace hlwSerial
                         }
                 }
             }
+#endregion collections
+            #endregion reference types
         }
 
 
@@ -409,7 +436,7 @@ namespace hlwSerial
                 if (newType == null || !T.IsAssignableFrom(newType)) return null;
                 else T = newType;
             }
-
+            //?PRIMARY TYPE
             if (T == typeof(byte))
             {
                 var b = underlyingStream.ReadByte();
