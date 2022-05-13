@@ -10,15 +10,24 @@ namespace hlwSerial
 {
     public class Serializer : IDisposable
     {
+        //? Work byte arrays
+        #region
         private readonly byte[] Size8 = new byte[8];
         private readonly byte[] Size4 = new byte[4];
         private readonly byte[] Size2 = new byte[2];
         private readonly byte[] Size1 = new byte[1];
+        #endregion
 
-        public Stream underlyingStream;
+        //?=================
+        //?Properties and fields
+        #region
+        /// <summary>
+        /// The stream used by the serializer.
+        /// </summary>
+        public readonly Stream underlyingStream;
         
         /// <summary>
-        /// Gets or set the position of the underlying stream.
+        /// Gets or set the position in the underlying stream.
         /// </summary>
         public long Position
         {
@@ -36,10 +45,20 @@ namespace hlwSerial
             this.underlyingStream = stream;
         }
 
+        public int MaxRecursivity = 100;
+        #endregion
 
+
+        //? PropertyInfos handling.
+        #region
         private static Dictionary<Type,CustomPropertyInfo[]> infos = new Dictionary<Type,CustomPropertyInfo[]>();
 
-        public static CustomPropertyInfo[] GetPropertiesWithAttribute(Type T)
+        /// <summary>
+        /// Return the properties of asked type that are decorated with the [SerializeAttribute]
+        /// </summary>
+        /// <param name="T">The type from which you want the decorated properties.</param>
+        /// <returns></returns>
+        private static CustomPropertyInfo[] GetPropertiesWithAttribute(Type T)
         {
             if(infos.ContainsKey(T)) return infos[T];
             else
@@ -56,38 +75,64 @@ namespace hlwSerial
             }
             
         }
+        #endregion
+
+
+        //?===============
+        //?WRITING
+        //todo add Datetime
+        #region
+
 
         /// <summary>
-        /// Writes the serializable object into the stream by writing each of its properties decorated with the SerializeAttribute attribute. If the object is a implemented type, it will be serialized as well.
+        /// Writes the serializable object into the underlying stream by writing each of its properties decorated with the SerializeAttribute attribute. If the object is an implemented type, it will be serialized as is.
         /// </summary>
-        /// <param name="stream">The stream to write the bytes into</param>
-        /// <param name="serializable">The object to serialize</param>
+        /// <param name="serializable">The entity to serialize</param>
+        /// <param name="SerializeType">Should you serialize the entity's type and support polymorphism? If used, DeserializeType must be used when deserializing the object</param>
+        /// <param name="SerializeElementsType">If the serialized type is an array or collection, do you want to serialize the type of the elements it contains and support polymorphism?</param>
+        /// <param name="nullable">Has to be true if the type serialized is a nullable<T> like an int? is.</param>
         public void Write(object serializable, bool SerializeType = false, bool SerializeElementsType = false, bool nullable = false)
         {
-            if (serializable is ISerializable ss)
+            int RC = 0;
+            WriteObject(serializable,ref RC,SerializeType,SerializeElementsType,nullable);
+        }
+
+
+
+        /// <summary>
+        /// Writes the serializable object into the stream by writing each of its properties decorated with the SerializeAttribute attribute. If the object is an implemented type, it will be serialized as well.
+        /// </summary>
+        /// <param name="serializable">The object to serialize</param>
+        private void WriteObject(object serializable,ref int RecursivityCount, bool SerializeType = false, bool SerializeElementsType = false, bool nullable = false)
+        {
+            RecursivityCount++;
+            if (RecursivityCount > MaxRecursivity)
+                throw new SerializationTooMuchRecursivityException(
+                    $"Max Recursivity in Writing Object have been reached. Two Objects or more might be trying to serialize each other. Actual recursivity{RecursivityCount}. You change change MaxRecursivity inside the serializer class.");
+            if (serializable is ISerializable ss)//!Only ISerializable properties will have their decorated properties serialized
             {
                 if (serializable is IPrepareSerialization s) s.PrepareSerialization();
 
                 if (SerializeType)
                 {
-                    WriteProperty(serializable.GetType());
+                    WriteProperty(serializable.GetType(), ref RecursivityCount);
                 }
 
                 foreach (var customPropertyInfo in GetPropertiesWithAttribute(serializable.GetType()))
                 {
-                    this.WriteProperty(customPropertyInfo.PropertyInfo.GetValue(serializable),customPropertyInfo.SerializeType,customPropertyInfo.SerializeElementsType,customPropertyInfo.Nullable);
+                    this.WriteProperty(customPropertyInfo.PropertyInfo.GetValue(serializable), ref RecursivityCount, customPropertyInfo.SerializeType,customPropertyInfo.SerializeElementsType,customPropertyInfo.Nullable);
                 }
             }
             else
-            {
-                WriteProperty(serializable,SerializeType,SerializeElementsType, nullable);
+            {//if it's not an ISerializable, serialize it as a property.
+                WriteProperty(serializable, ref RecursivityCount, SerializeType,SerializeElementsType, nullable);
             }
 
-            
+            RecursivityCount--;
         }
 
 
-        private void WriteProperty(object value, bool SerializeType = false, bool SerializeElementsType = false,bool nullable = false)
+        private void WriteProperty(object value,ref int RecursivityCount, bool SerializeType = false, bool SerializeElementsType = false,bool nullable = false)
         {
             //? Type writing if serializeType
             #region type writing
@@ -96,8 +141,8 @@ namespace hlwSerial
             {
                 //todo rewrite this mess
                 if(type!=null)
-                    WriteProperty(type);
-                if(type==null)WriteProperty(true);
+                    WriteProperty(type, ref RecursivityCount);
+                if(type==null)WriteProperty(true, ref RecursivityCount);
                 if (type == null) return;
             }
             else
@@ -105,18 +150,18 @@ namespace hlwSerial
 
                 if (value == null)
                 {
-                    WriteProperty(true);
+                    WriteProperty(true, ref RecursivityCount);
                     return;
                 }
                 else if (value != null && nullable)
                 {
-                    WriteProperty(false);
+                    WriteProperty(false, ref RecursivityCount);
                 }
             }
             #endregion
 
-            //? TYPE CHECKS AND WRITE
-            //todo Remake this with a more "object oriented approach and less if else if
+            
+            //todo Remake this with a more "object oriented" approach and less if else if
 
             //? Primary Types
             #region
@@ -181,7 +226,7 @@ namespace hlwSerial
 
             }
             #endregion
-            //? REFERENCE TYPES
+            //? Type and ISerializable
             #region
             else if (typeof(Type).IsAssignableFrom(type))
             {
@@ -209,10 +254,11 @@ namespace hlwSerial
                 if (val != null)
                 {
 
-                    this.Write(val,SerializeType);
+                    this.WriteObject(val, ref RecursivityCount, SerializeType);
 
                 }
             }
+            #endregion reference types
             //?Check for nullable
             //x  Could be deleted?
             #region nullable
@@ -324,10 +370,10 @@ namespace hlwSerial
                     var ty = type.GetElementType();
                     if (ty != null)
                     {
-                        this.WriteProperty(val.Length);
+                        this.WriteProperty(val.Length, ref RecursivityCount);
                         foreach (var VARIABLE in val)
                         {
-                            this.WriteProperty(VARIABLE,SerializeElementsType);
+                            this.WriteProperty(VARIABLE, ref RecursivityCount, SerializeElementsType);
                         }
                     }
                 }
@@ -336,17 +382,17 @@ namespace hlwSerial
             {
                 var val = value as IList;
                 if (!SerializeType && !nullable)
-                    this.WriteProperty(val == null);
+                    this.WriteProperty(val == null, ref RecursivityCount);
                 if (val != null)
                 {
 
-                    this.WriteProperty(val.Count);
+                    this.WriteProperty(val.Count, ref RecursivityCount);
                     var ty = type.GetGenericArguments()[0];
                     if (ty != null)
                     {
                         foreach (var VARIABLE in val)
                         {
-                            this.WriteProperty(VARIABLE,SerializeElementsType);
+                            this.WriteProperty(VARIABLE, ref RecursivityCount, SerializeElementsType);
                         }
                     }
                 }
@@ -357,30 +403,34 @@ namespace hlwSerial
             {
                 var val = value as IDictionary;
                 if (!SerializeType && !nullable)
-                    this.WriteProperty(val == null);
+                    this.WriteProperty(val == null, ref RecursivityCount);
                 if (val != null)
                 {
 
-                    this.WriteProperty(val.Count);
+                    this.WriteProperty(val.Count, ref RecursivityCount);
                     var ty1 = type.GetGenericArguments()[0];
                     var ty2 = type.GetGenericArguments()[1];
 
 
                         foreach (var VARIABLE in val.Keys)
                         {
-                            this.WriteProperty(VARIABLE,SerializeElementsType);
+                            this.WriteProperty(VARIABLE, ref RecursivityCount, SerializeElementsType);
                         }
                         foreach (var VARIABLE in val.Values)
                         {
-                            this.WriteProperty(VARIABLE,SerializeElementsType);
+                            this.WriteProperty(VARIABLE, ref RecursivityCount, SerializeElementsType);
                         }
                 }
             }
 #endregion collections
-            #endregion reference types
+            
         }
+        #endregion
 
-
+        //?=============
+        //?READING
+        //todo add Datetime
+        #region
         public object Read( Type T, bool deserializeType = false, bool deserializeElementsType = false)
         {
             
@@ -430,13 +480,17 @@ namespace hlwSerial
 
         public object ReadProperty(Type T, bool DeserializeType = false, bool DeserializeElementsType = false)
         {
+            //?Deserialize type
+            #region 
             if (DeserializeType)
             {
                 var newType = ReadProperty<Type>();
                 if (newType == null || !T.IsAssignableFrom(newType)) return null;
                 else T = newType;
             }
+            #endregion
             //?PRIMARY TYPE
+            #region
             if (T == typeof(byte))
             {
                 var b = underlyingStream.ReadByte();
@@ -499,6 +553,9 @@ namespace hlwSerial
                 underlyingStream.Read(Size1, 0, 1);
                 return (bool)BitConverter.ToBoolean(Size1, 0);
             }
+            #endregion
+            //?String
+            #region
             else if (T == typeof(string))
             {
                 bool isNull;
@@ -528,6 +585,9 @@ namespace hlwSerial
                 }
 
             }
+            #endregion
+            //?Type and ISerializable
+            #region
             else if (T == typeof(Type))
             {
                 bool isNull;
@@ -574,6 +634,9 @@ namespace hlwSerial
                     return this.Read(T,DeserializeType);
                 }
             }
+            #endregion
+            //?Nullable
+            #region
             else if (T.IsGenericType && typeof(Nullable<>) == T.GetGenericTypeDefinition())
             {
                 bool isNull;
@@ -637,6 +700,9 @@ namespace hlwSerial
                     else return null;
                 }
             }
+            #endregion
+            //?Collections
+            #region
             else if (typeof(Array).IsAssignableFrom(T))
             {
 
@@ -729,6 +795,7 @@ namespace hlwSerial
                     return Dict;
                 }
             }
+            #endregion
             else return null;
         }
 
@@ -743,6 +810,10 @@ namespace hlwSerial
             
             
         }
+
+        #endregion
+
+
 
 
         public void Dispose()

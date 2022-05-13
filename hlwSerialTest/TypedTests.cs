@@ -59,7 +59,6 @@ namespace hlwSerialTest
 
             Serializer ser = new Serializer(stream);
 
-           
 
             ser.Write(one,true);
             ser.Position = 0;
@@ -183,12 +182,12 @@ namespace hlwSerialTest
             fooTyped typed = new fooTyped();
             typed.foo = one;
             typed.integer = 8;
-            fooTwo two = new fooTwo() { integer = 130, nullable = 80 };
-            fooTwo three = new fooTwo() { integer = 130, nullable = null };
-            fooOne four = new fooOne() { integer = 90, integuru = 15, ty = typeof(int) };
-            fooTwo five = new fooTwo() { integer = 99, nullable = 55 };
-            fooOne six = new fooOne() { integer = 90, integuru = 15, ty = null };
-            fooTwo seven = new fooTwo() { integer = 99, nullable = 112 };
+            fooTwo two = new fooTwo { integer = 130, nullable = 80 };
+            fooTwo three = new fooTwo { integer = 130, nullable = null };
+            fooOne four = new fooOne { integer = 90, integuru = 15, ty = typeof(int) };
+            fooTwo five = new fooTwo { integer = 99, nullable = 55 };
+            fooOne six = new fooOne { integer = 90, integuru = 15, ty = null };
+            fooTwo seven = new fooTwo { integer = 99, nullable = 112 };
 
             typed.list = new List<foox> { one, two, three, four, five, six, seven };
 
@@ -203,6 +202,65 @@ namespace hlwSerialTest
             fooTyped typed2 = ser.Read<fooTyped>(true);
 
             Assert.AreEqual(typeof(foox), (typed2.foo as fooOne).ty);
+        }
+
+
+
+        [TestMethod]
+        public void ElementsType5()
+        {
+            MemoryStream stream = new MemoryStream();
+
+            fooOne one = new fooOne();
+            one.integer = 4;
+            one.integuru = 8;
+            one.ty = typeof(foox);
+            fooTyped typed = new fooTyped();
+            typed.foo = one;
+            typed.integer = 8;
+            fooTwo two = new fooTwo() { integer = 130, nullable = 80 };
+            fooTwo three = new fooTwo() { integer = 130, nullable = null };
+            fooOne four = new fooOne() { integer = 90, integuru = 15, ty = typeof(int) };
+            fooTwo five = new fooTwo() { integer = 99, nullable = 55 };
+            fooOne six = new fooOne() { integer = 90, integuru = 15, ty = null };
+            fooTwo seven = new fooTwo() { integer = 99, nullable = 112 };
+
+            typed.list = new List<foox> { one, two, three, four, null, five, six, seven };
+
+
+            Serializer ser = new Serializer(stream);
+
+            ser.Write(typed, true);
+
+            ser.Position = 0;
+
+
+            fooTyped typed2 = ser.Read<fooTyped>(true);
+
+            Assert.AreEqual(null,typed2.list[4]);
+        }
+
+        [TestMethod]
+        public void ElementsType6()
+        {
+            MemoryStream stream = new MemoryStream();
+
+            fooTyped typed = null;
+            
+
+
+            Serializer ser = new Serializer(stream);
+
+            ser.Write(typed, true);
+
+            Console.WriteLine(String.Join(' ', stream.ToArray().Select(a => a.ToString())));
+
+            ser.Position = 0;
+
+
+            fooTyped typed2 = ser.Read<fooTyped>(true);
+
+            Assert.AreEqual(null, typed2);
         }
     }
 

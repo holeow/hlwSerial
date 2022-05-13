@@ -12,16 +12,6 @@ namespace hlwSerialTest
         [Serialize]public float r { get; set; }
 
 
-        public void PrepareSerialization()
-        {
-            
-        }
-
-        public void AfterDeserialization()
-        {
-
-        }
-
         public fooBar()
         {
 
@@ -38,16 +28,7 @@ namespace hlwSerialTest
         [Serialize]public long l { get; set; }
         [Serialize]public fooBar f { get; set; }
 
-        public void PrepareSerialization()
-        {
-            
-        }
-
-        public void AfterDeserialization()
-        {
-
-        }
-
+       
         public bigfoo()
         {
 
