@@ -191,7 +191,7 @@ namespace hlwSerial
                 if (val != null)
                 {
 
-                    this.Write(val);
+                    this.Write(val,SerializeType);
 
                 }
             }
@@ -544,7 +544,7 @@ namespace hlwSerial
                 if (isNull) return null;
                 else
                 {
-                    return this.Read(T);
+                    return this.Read(T,DeserializeType);
                 }
             }
             else if (T.IsGenericType && typeof(Nullable<>) == T.GetGenericTypeDefinition())
@@ -632,7 +632,7 @@ namespace hlwSerial
                     var array = Array.CreateInstance(T.GetElementType(), this.ReadProperty<int>());
                     for (int i = 0; i < array.Length; i++)
                     {
-                        array.SetValue(this.ReadProperty(ty),i);
+                        array.SetValue(this.ReadProperty(ty,DeserializeElementsType),i);
                     }
                     return array;
                 }
@@ -658,7 +658,7 @@ namespace hlwSerial
                     var List = Activator.CreateInstance(T) as IList;
                     for (int i = 0; i < size; i++)
                     {
-                        List.Add(this.ReadProperty(ty));
+                        List.Add(this.ReadProperty(ty,DeserializeElementsType));
                     }
                     return List;
                 }
@@ -687,12 +687,12 @@ namespace hlwSerial
                     var size = this.ReadProperty<int>();
                     for (int i = 0; i < size; i++)
                     {
-                        keys.Add(this.ReadProperty(ty1));
+                        keys.Add(this.ReadProperty(ty1,DeserializeElementsType));
                     }
 
                     for (int i = 0; i < size; i++)
                     {
-                        values.Add(this.ReadProperty(ty2));
+                        values.Add(this.ReadProperty(ty2,DeserializeElementsType));
                     }
                     for (int i = 0; i < size; i++)
                     {
