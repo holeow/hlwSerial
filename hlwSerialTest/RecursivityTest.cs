@@ -27,7 +27,31 @@ namespace hlwSerialTest
             Serializer ser = new Serializer(s);
             ser.MaxRecursivity = 10;
             
-            Assert.ThrowsException<SerializationTooMuchRecursivityException>(() => ser.Write(foo));
+            Assert.ThrowsException<SerializationContainsSameObjectTwiceInTheStack>(() => ser.Write(foo));
+        }
+
+        [TestMethod]
+        public void NotAutorecursiveTest()
+        {
+            List<RecursiveFoo> foos = new List<RecursiveFoo>();
+
+            RecursiveFoo foo = new RecursiveFoo { amount = 100 };
+            foo.foo = null;
+            for (int i = 0; i < 10; i++)
+            {
+                foos.Add(foo);
+            }
+            Stream s = new MemoryStream();
+            Serializer ser = new Serializer(s);
+            ser.MaxRecursivity = 10;
+
+            ser.Write(foos);
+
+            ser.Position = 0;
+
+            var list = ser.Read<List<RecursiveFoo>>();
+
+            Assert.AreEqual(list[4].amount,list[9].amount);
         }
 
         [TestMethod]

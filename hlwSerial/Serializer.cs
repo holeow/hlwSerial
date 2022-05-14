@@ -16,6 +16,8 @@ namespace hlwSerial
         private readonly byte[] Size4 = new byte[4];
         private readonly byte[] Size2 = new byte[2];
         private readonly byte[] Size1 = new byte[1];
+
+        private Stack<object> _stack = new Stack<object>();
         #endregion
 
         //?=================
@@ -94,6 +96,7 @@ namespace hlwSerial
         public void Write(object serializable, bool SerializeType = false, bool SerializeElementsType = false, bool nullable = false)
         {
             int RC = 0;
+            _stack.Clear();
             WriteObject(serializable,ref RC,SerializeType,SerializeElementsType,nullable);
         }
 
@@ -107,10 +110,15 @@ namespace hlwSerial
         {
             RecursivityCount++;
             if (RecursivityCount > MaxRecursivity)
+            {
                 throw new SerializationTooMuchRecursivityException(
-                    $"Max Recursivity in Writing Object have been reached. Two Objects or more might be trying to serialize each other. Actual recursivity{RecursivityCount}. You change change MaxRecursivity inside the serializer class.");
+                    $"Max Recursivity in Writing Object have been reached.Actual recursivity{RecursivityCount}. You change change MaxRecursivity inside the serializer class.");
+            }
+
             if (serializable is ISerializable ss)//!Only ISerializable properties will have their decorated properties serialized
             {
+                _stack.Push(ss);
+
                 if (serializable is IPrepareSerialization s) s.PrepareSerialization();
 
                 if (SerializeType)
@@ -120,8 +128,10 @@ namespace hlwSerial
 
                 foreach (var customPropertyInfo in GetPropertiesWithAttribute(serializable.GetType()))
                 {
+        
                     this.WriteProperty(customPropertyInfo.PropertyInfo.GetValue(serializable), ref RecursivityCount, customPropertyInfo.SerializeType,customPropertyInfo.SerializeElementsType,customPropertyInfo.Nullable);
                 }
+                _stack.Pop();
             }
             else
             {//if it's not an ISerializable, serialize it as a property.
@@ -129,6 +139,7 @@ namespace hlwSerial
             }
 
             RecursivityCount--;
+            
         }
 
 
@@ -253,7 +264,11 @@ namespace hlwSerial
                     underlyingStream.Write(BitConverter.GetBytes(val == null), 0, 1);
                 if (val != null)
                 {
-
+                    if (_stack.Contains(val))
+                    {
+                        throw new SerializationContainsSameObjectTwiceInTheStack(
+                            $"Object type {type} is serialized inside itself or inside one object it contains.");
+                    }
                     this.WriteObject(val, ref RecursivityCount, SerializeType);
 
                 }
@@ -367,6 +382,12 @@ namespace hlwSerial
                     underlyingStream.Write(BitConverter.GetBytes(val == null), 0, 1);
                 if (val != null)
                 {
+                    if (_stack.Contains(val))
+                    {
+                        throw new SerializationContainsSameObjectTwiceInTheStack(
+                            $"Object type {type} is serialized inside itself or inside one object it contains.");
+                    }
+                    _stack.Push(val);
                     var ty = type.GetElementType();
                     if (ty != null)
                     {
@@ -376,6 +397,8 @@ namespace hlwSerial
                             this.WriteProperty(VARIABLE, ref RecursivityCount, SerializeElementsType);
                         }
                     }
+
+                    _stack.Pop();
                 }
             }
             else if (type.IsGenericType && typeof(List<>) == type.GetGenericTypeDefinition())
@@ -385,7 +408,12 @@ namespace hlwSerial
                     this.WriteProperty(val == null, ref RecursivityCount);
                 if (val != null)
                 {
-
+                    if (_stack.Contains(val))
+                    {
+                        throw new SerializationContainsSameObjectTwiceInTheStack(
+                            $"Object type {type} is serialized inside itself or inside one object it contains.");
+                    }
+                    _stack.Push(val);
                     this.WriteProperty(val.Count, ref RecursivityCount);
                     var ty = type.GetGenericArguments()[0];
                     if (ty != null)
@@ -395,6 +423,8 @@ namespace hlwSerial
                             this.WriteProperty(VARIABLE, ref RecursivityCount, SerializeElementsType);
                         }
                     }
+
+                    _stack.Pop();
                 }
 
                 
@@ -406,7 +436,12 @@ namespace hlwSerial
                     this.WriteProperty(val == null, ref RecursivityCount);
                 if (val != null)
                 {
-
+                    if (_stack.Contains(val))
+                    {
+                        throw new SerializationContainsSameObjectTwiceInTheStack(
+                            $"Object type {type} is serialized inside itself or inside one object it contains.");
+                    }
+                    _stack.Push(val);
                     this.WriteProperty(val.Count, ref RecursivityCount);
                     var ty1 = type.GetGenericArguments()[0];
                     var ty2 = type.GetGenericArguments()[1];
@@ -420,6 +455,8 @@ namespace hlwSerial
                         {
                             this.WriteProperty(VARIABLE, ref RecursivityCount, SerializeElementsType);
                         }
+
+                        _stack.Pop();
                 }
             }
 #endregion collections
