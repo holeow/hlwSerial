@@ -10,6 +10,11 @@ namespace hlwSerial
 {
     public class Serializer : IDisposable
     {
+        public Serializer(Stream stream)
+        {
+            this.underlyingStream = stream;
+        }
+
         //? Work byte arrays
         #region
         private readonly byte[] Size8 = new byte[8];
@@ -17,7 +22,7 @@ namespace hlwSerial
         private readonly byte[] Size2 = new byte[2];
         private readonly byte[] Size1 = new byte[1];
 
-        private Stack<object> _stack = new Stack<object>();
+        
         #endregion
 
         //?=================
@@ -42,18 +47,33 @@ namespace hlwSerial
                 underlyingStream.Position = value;
             }
         }
-        public Serializer(Stream stream)
-        {
-            this.underlyingStream = stream;
-        }
+        
+        private Stack<object> _stack = new Stack<object>();
 
         public int MaxRecursivity = 100;
         #endregion
 
 
-        //? PropertyInfos handling.
+        //? PropertyInfos and type handling.
         #region
         private static Dictionary<Type,CustomPropertyInfo[]> infos = new Dictionary<Type,CustomPropertyInfo[]>();
+
+        private static Dictionary<Type, byte[]> typeStrings = new Dictionary<Type, byte[]>();
+
+        private static byte[] GetTypeString(Type ty)
+        {
+            if(typeStrings.ContainsKey(ty)) return typeStrings[ty];
+            else
+            {
+                var str = ty.GetShortTypeName();
+                var strby = Encoding.UTF8.GetBytes(str);
+                var by = new byte[strby.Length + 4];
+                BitConverter.GetBytes(strby.Length).CopyTo(by,0);
+                strby.CopyTo(by,4);
+                typeStrings.Add(ty, by);
+                return by;
+            }
+        }
 
         /// <summary>
         /// Return the properties of asked type that are decorated with the [SerializeAttribute]
@@ -248,10 +268,9 @@ namespace hlwSerial
                     underlyingStream.Write(BitConverter.GetBytes(val == null), 0, 1);
                 if (val != null)
                 {
-                    var str = val.GetShortTypeName();
+                    
 
-                    var by = Encoding.UTF8.GetBytes(str);
-                    underlyingStream.Write(BitConverter.GetBytes(by.Length), 0, 4);
+                    var by = GetTypeString(val);
                     underlyingStream.Write(by, 0, by.Length);
                 }
                 
