@@ -683,6 +683,26 @@ namespace hlwSerial
                 underlyingStream.Write(by, 0, by.Length);
             }
         }
+        //?ISerializable
+        private void WriteProperty(ISerializable value, ref int RecursivityCount, bool SerializeType = false,
+            bool SerializeElementsType = false, bool nullable = false)
+        {
+            var val = value;
+            if (!SerializeType && !nullable)
+                underlyingStream.Write(BitConverter.GetBytes(val == null), 0, 1);
+            if (val != null)
+            {
+                if (_stack.Contains(val))
+                {
+                    throw new SerializationContainsSameObjectTwiceInTheStack(
+                        $"Object is serialized inside itself or inside one object it contains.");
+                }
+                this.WriteObject(val, ref RecursivityCount, SerializeType);
+
+            }
+        }
+
+
         #endregion
 
         #endregion
