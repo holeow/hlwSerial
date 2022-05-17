@@ -10,9 +10,13 @@ namespace hlwSerial
 {
     public class Serializer : IDisposable
     {
-        public Serializer(Stream stream)
+        //Todo Add support for endianness.
+        public Serializer(Stream stream,  Endianness endianess = Endianness.Auto)
         {
             this.underlyingStream = stream;
+            this.Endianess = endianess;
+            this.ReversedEndianess = (BitConverter.IsLittleEndian && endianess == Endianness.BigEndian) ||
+                                     (!BitConverter.IsLittleEndian && endianess == Endianness.LittleEndian);
         }
 
         //? Work byte arrays
@@ -51,6 +55,9 @@ namespace hlwSerial
         private Stack<object> _stack = new Stack<object>();
 
         public int MaxRecursivity = 100;
+
+        public readonly Endianness Endianess;
+        public readonly bool ReversedEndianess;
         #endregion
 
 
@@ -67,11 +74,9 @@ namespace hlwSerial
             {
                 var str = ty.GetShortTypeName();
                 var strby = Encoding.UTF8.GetBytes(str);
-                var by = new byte[strby.Length + 4];
-                BitConverter.GetBytes(strby.Length).CopyTo(by,0);
-                strby.CopyTo(by,4);
-                typeStrings.Add(ty, by);
-                return by;
+
+                typeStrings.Add(ty, strby);
+                return strby;
             }
         }
 
@@ -198,7 +203,7 @@ namespace hlwSerial
             #region
             if (type == typeof(byte))
             {
-                underlyingStream.WriteByte((byte)value);
+                WriteProperty((byte)value, ref RecursivityCount,SerializeType,SerializeElementsType,nullable);
             }
             else if (type == typeof(sbyte))
             {
@@ -261,6 +266,7 @@ namespace hlwSerial
             #region
             else if (typeof(Type).IsAssignableFrom(type))
             {
+               
                 var val = (Type)value;
                 
 
@@ -481,6 +487,204 @@ namespace hlwSerial
 #endregion collections
             
         }
+
+
+        //? Each of writing Methods
+
+        #region
+        //?byte
+        private void WriteProperty(byte value, ref int RecursivityCount, bool SerializeType = false,
+            bool SerializeElementsType = false, bool nullable = false)
+        {
+            underlyingStream.WriteByte(value);
+        }
+        private void WriteProperty(sbyte value, ref int RecursivityCount, bool SerializeType = false,
+            bool SerializeElementsType = false, bool nullable = false)
+        {
+            underlyingStream.WriteByte(unchecked((byte)value));
+        }
+        //?short
+        private void WriteProperty(short value, ref int RecursivityCount, bool SerializeType = false,
+            bool SerializeElementsType = false, bool nullable = false)
+        {
+            if (ReversedEndianess)
+            {
+                var bytes = BitConverter.GetBytes((short) value);
+                Size2[0] = bytes[1];
+                Size2[1] = bytes[0];
+                underlyingStream.Write(Size2, 0, 2);
+            }
+            else
+            {
+                underlyingStream.Write(BitConverter.GetBytes((short)value), 0, 2);
+            }
+        }
+        private void WriteProperty(ushort value, ref int RecursivityCount, bool SerializeType = false,
+            bool SerializeElementsType = false, bool nullable = false)
+        {
+            if (ReversedEndianess)
+            {
+                var bytes = BitConverter.GetBytes((ushort)value);
+                Size2[0] = bytes[1];
+                Size2[1] = bytes[0];
+                underlyingStream.Write(Size2, 0, 2);
+            }
+            else
+            {
+                underlyingStream.Write(BitConverter.GetBytes((ushort)value), 0, 2);
+            }
+        }
+        //?int
+        private void WriteProperty(int value, ref int RecursivityCount, bool SerializeType = false,
+            bool SerializeElementsType = false, bool nullable = false)
+        {
+            if (ReversedEndianess)
+            {
+                var bytes = BitConverter.GetBytes((int)value);
+                Size4[0] = bytes[3];
+                Size4[1] = bytes[2];
+                Size4[2] = bytes[1];
+                Size4[3] = bytes[0];
+                underlyingStream.Write(Size4, 0, 4);
+            }
+            else
+            {
+                underlyingStream.Write(BitConverter.GetBytes((int)value), 0, 4);
+            }
+        }
+        private void WriteProperty(uint value, ref int RecursivityCount, bool SerializeType = false,
+            bool SerializeElementsType = false, bool nullable = false)
+        {
+            if (ReversedEndianess)
+            {
+                var bytes = BitConverter.GetBytes((uint)value);
+                Size4[0] = bytes[3];
+                Size4[1] = bytes[2];
+                Size4[2] = bytes[1];
+                Size4[3] = bytes[0];
+                underlyingStream.Write(Size4, 0, 4);
+            }
+            else
+            {
+                underlyingStream.Write(BitConverter.GetBytes((uint)value), 0, 4);
+            }
+        }
+        //?long
+        private void WriteProperty(long value, ref int RecursivityCount, bool SerializeType = false,
+            bool SerializeElementsType = false, bool nullable = false)
+        {
+            if (ReversedEndianess)
+            {
+                var bytes = BitConverter.GetBytes((long)value);
+                Size8[0] = bytes[7];
+                Size8[1] = bytes[6];
+                Size8[2] = bytes[5];
+                Size8[3] = bytes[4];
+                Size8[4] = bytes[3];
+                Size8[5] = bytes[2];
+                Size8[6] = bytes[1];
+                Size8[7] = bytes[0];
+                underlyingStream.Write(Size8, 0, 8);
+            }
+            else
+            {
+                underlyingStream.Write(BitConverter.GetBytes((long)value), 0, 8);
+            }
+        }
+        private void WriteProperty(ulong value, ref int RecursivityCount, bool SerializeType = false,
+            bool SerializeElementsType = false, bool nullable = false)
+        {
+            if (ReversedEndianess)
+            {
+                var bytes = BitConverter.GetBytes((ulong)value);
+                Size8[0] = bytes[7];
+                Size8[1] = bytes[6];
+                Size8[2] = bytes[5];
+                Size8[3] = bytes[4];
+                Size8[4] = bytes[3];
+                Size8[5] = bytes[2];
+                Size8[6] = bytes[1];
+                Size8[7] = bytes[0];
+                underlyingStream.Write(Size8, 0, 8);
+            }
+            else
+            {
+                underlyingStream.Write(BitConverter.GetBytes((ulong)value), 0, 8);
+            }
+        }
+        //?float
+        private void WriteProperty(float value, ref int RecursivityCount, bool SerializeType = false,
+            bool SerializeElementsType = false, bool nullable = false)
+        {
+            if (ReversedEndianess)
+            {
+                var bytes = BitConverter.GetBytes((float)value);
+                Size4[0] = bytes[3];
+                Size4[1] = bytes[2];
+                Size4[2] = bytes[1];
+                Size4[3] = bytes[0];
+                underlyingStream.Write(Size4, 0, 4);
+            }
+            else
+            {
+                underlyingStream.Write(BitConverter.GetBytes((float)value), 0, 4);
+            }
+        }
+        private void WriteProperty(double value, ref int RecursivityCount, bool SerializeType = false,
+            bool SerializeElementsType = false, bool nullable = false)
+        {
+            if (ReversedEndianess)
+            {
+                var bytes = BitConverter.GetBytes((double)value);
+                Size8[0] = bytes[7];
+                Size8[1] = bytes[6];
+                Size8[2] = bytes[5];
+                Size8[3] = bytes[4];
+                Size8[4] = bytes[3];
+                Size8[5] = bytes[2];
+                Size8[6] = bytes[1];
+                Size8[7] = bytes[0];
+                underlyingStream.Write(Size8, 0, 8);
+            }
+            else
+            {
+                underlyingStream.Write(BitConverter.GetBytes((double)value), 0, 8);
+            }
+        }
+        //?bool
+        private void WriteProperty(bool value, ref int RecursivityCount, bool SerializeType = false,
+            bool SerializeElementsType = false, bool nullable = false)
+        {
+            underlyingStream.WriteByte(BitConverter.GetBytes(value)[0]);
+        }
+        //?string
+        private void WriteProperty(string value, ref int RecursivityCount, bool SerializeType = false,
+            bool SerializeElementsType = false, bool nullable = false)
+        {
+            if (!SerializeType && !nullable)
+                WriteProperty(value == null, ref RecursivityCount);
+            if (value != null)
+            {
+                var by = Encoding.UTF8.GetBytes(value);
+                WriteProperty(by.Length, ref RecursivityCount);
+                underlyingStream.Write(by, 0, by.Length);
+            }
+        }
+        //?Type
+        private void WriteProperty(Type value, ref int RecursivityCount, bool SerializeType = false,
+            bool SerializeElementsType = false, bool nullable = false)
+        {
+            if (!SerializeType && !nullable)
+                WriteProperty(value == null, ref RecursivityCount);
+            if (value != null)
+            {
+                var by = GetTypeString(value);
+                WriteProperty(by.Length, ref RecursivityCount);
+                underlyingStream.Write(by, 0, by.Length);
+            }
+        }
+        #endregion
+
         #endregion
 
         //?=============
@@ -876,5 +1080,22 @@ namespace hlwSerial
         {
             underlyingStream?.Dispose();
         }
+    }
+
+
+    public enum Endianness
+    {
+        /// <summary>
+        /// Will use the endianness of the system
+        /// </summary>
+        Auto,
+        /// <summary>
+        /// Will use big endianness and will potentially have to revert byte arrays for that.
+        /// </summary>
+        BigEndian,
+        /// <summary>
+        /// Will use little endianness and will potentially have to revert byte arrays for that.
+        /// </summary>
+        LittleEndian
     }
 }

@@ -3,12 +3,25 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using hlwSerial;
 
 namespace hlwSerialTest
 {
-   
+    public class TestThings
+    {
+        public void Write(object obj)
+        {
+
+        }
+
+        public void Write(int obj)
+        {
+
+        }
+    }
+
 
     [TestClass]
     public class RandomTests
@@ -28,7 +41,13 @@ namespace hlwSerialTest
             toChange++;
         }
 
-        
+
+        public void BufferKnowledge()
+        {
+            var t = new TestThings();
+            t.Write(16);
+        }
+
         [TestMethod]
         public void TestBufferCopy5()
         {
