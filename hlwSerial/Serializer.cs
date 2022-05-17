@@ -133,7 +133,7 @@ namespace hlwSerial
         /// <param name="serializable">The object to serialize</param>
         private void WriteObject(object serializable,ref int RecursivityCount, bool SerializeType = false, bool SerializeElementsType = false, bool nullable = false)
         {
-            RecursivityCount++;
+            unchecked { RecursivityCount++; }
             if (RecursivityCount > MaxRecursivity)
             {
                 throw new SerializationTooMuchRecursivityException(
@@ -163,7 +163,7 @@ namespace hlwSerial
                 WriteProperty(serializable, ref RecursivityCount, SerializeType,SerializeElementsType, nullable);
             }
 
-            RecursivityCount--;
+           unchecked { RecursivityCount--; }
             
         }
 
@@ -701,6 +701,7 @@ namespace hlwSerial
 
             }
         }
+        //?Arrays
 
 
         #endregion

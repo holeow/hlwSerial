@@ -26,6 +26,33 @@ namespace hlwSerialTest
     [TestClass]
     public class RandomTests
     {
+
+        [TestMethod]
+        public void TestArrayTypes()
+        {
+            var simpleArr = new int[10];
+            var biArr = new int[10, 15];
+            
+            Console.WriteLine(simpleArr.GetType());
+            Console.WriteLine(biArr.GetType());
+            Console.WriteLine(biArr.Length);
+            Console.WriteLine(biArr.Rank);
+            Console.WriteLine(biArr.GetLength(0));
+            Console.WriteLine(biArr.GetLength(1));
+            //!Exception: Console.WriteLine(biArr.GetLength(2));
+
+            Console.WriteLine("===================");
+            var biArr2 = Array.CreateInstance(typeof(int), new int[] {10, 15});
+
+            Console.WriteLine(biArr2.GetType());
+            Console.WriteLine(biArr2.Length);
+            Console.WriteLine(biArr2.Rank);
+            Console.WriteLine(biArr2.GetLength(0));
+            Console.WriteLine(biArr2.GetLength(1));
+
+
+        }
+
         [TestMethod]
         public void TestReference()
         {
