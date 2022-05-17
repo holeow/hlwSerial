@@ -32,7 +32,7 @@ namespace hlwSerialTest
         {
             var simpleArr = new int[10];
             var biArr = new int[10, 15];
-            
+            var jaggArr = new int[5][];
             Console.WriteLine(simpleArr.GetType());
             Console.WriteLine(biArr.GetType());
             Console.WriteLine(biArr.Length);
@@ -50,7 +50,16 @@ namespace hlwSerialTest
             Console.WriteLine(biArr2.GetLength(0));
             Console.WriteLine(biArr2.GetLength(1));
 
+            Console.WriteLine("===================");
 
+            Console.WriteLine(jaggArr.GetType());
+            Console.WriteLine(jaggArr.Length);
+            Console.WriteLine(jaggArr.Rank);
+            Console.WriteLine(jaggArr.GetLength(0));
+            Console.WriteLine("===================");
+
+            var jaggArr2 = Array.CreateInstance(typeof(int[]), 5);
+            Console.WriteLine(jaggArr2.GetType());
         }
 
         [TestMethod]

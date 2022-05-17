@@ -702,7 +702,47 @@ namespace hlwSerial
             }
         }
         //?Arrays
+        private void WriteProperty(Array value, ref int RecursivityCount, bool SerializeType = false,
+            bool SerializeElementsType = false, bool nullable = false)
+        {
+            if (!SerializeType && !nullable)
+                underlyingStream.Write(BitConverter.GetBytes(value == null), 0, 1);
 
+            if (value != null)
+            {
+                var type = value.GetType();
+                if (_stack.Contains(value))
+                {
+                    throw new SerializationContainsSameObjectTwiceInTheStack(
+                        $"Object type {type} is serialized inside itself or inside one object it contains.");
+                }
+                _stack.Push(value);
+                var ty = type.GetElementType();
+                if (ty != null)
+                {
+                    this.WriteProperty((byte)value.Rank,ref RecursivityCount);//Handle multiDimensionnalArray
+                    for (int i = 0; i < value.Rank; i++)//!Writing each length of each rank.
+                    {
+                        WriteProperty(value.GetLength(i), ref RecursivityCount);
+                    }
+
+                    if (typeof(Array).IsAssignableFrom(ty))//Handle JaggedArray
+                    {
+                        foreach (Array variable in value)
+                        {
+                            this.WriteProperty(variable, ref RecursivityCount, false, SerializeElementsType);
+                        }
+                    }
+
+                    foreach (var VARIABLE in value)
+                    {
+                        this.WriteProperty(VARIABLE, ref RecursivityCount, SerializeElementsType);
+                    }
+                }
+
+                _stack.Pop();
+            }
+        }
 
         #endregion
 
