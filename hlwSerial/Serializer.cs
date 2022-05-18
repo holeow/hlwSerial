@@ -116,7 +116,7 @@ namespace hlwSerial
         /// </summary>
         /// <param name="serializable">The entity to serialize</param>
         /// <param name="SerializeType">Should you serialize the entity's type and support polymorphism? If used, DeserializeType must be used when deserializing the object</param>
-        /// <param name="SerializeElementsType">If the serialized type is an array or collection, do you want to serialize the type of the elements it contains and support polymorphism?</param>
+        /// <param name="SerializeElementsType">If the serialized type is an array or collection, do you want to serialize the type of the elements it contains and support polymorphism? Will be ignored if elements type is a sealed primary type.</param>
         /// <param name="nullable">Has to be true if the type serialized is a nullable<T> like an int? is.</param>
         public void Write(object serializable, bool SerializeType = false, bool SerializeElementsType = false, bool nullable = false)
         {
@@ -726,13 +726,57 @@ namespace hlwSerial
                         WriteProperty(value.GetLength(i), ref RecursivityCount);
                     }
 
-                    if (typeof(Array).IsAssignableFrom(ty))//Handle JaggedArray
-                    {
+                    if (typeof(Array).IsAssignableFrom(ty))//Handle JaggedArray 
+                    {//x Potential loss of speed as jagged arrays aren't that common and will be tested at first every time
                         foreach (Array variable in value)
                         {
                             this.WriteProperty(variable, ref RecursivityCount, false, SerializeElementsType);
                         }
                     }
+                    else if (ty == typeof(byte))
+                    {
+                        if(value.Rank==1) underlyingStream.Write(value as byte[], 0, value.Length);
+                        else
+                        {
+                            var val = GetArrayAsBytes(value, 1);
+                            underlyingStream.Write(val, 0, val.Length);
+                        }
+                    }
+                    else if ( ty == typeof(sbyte) || ty == typeof(bool))
+                    {
+                        var val = GetArrayAsBytes(value, 1);
+                        underlyingStream.Write(val, 0, val.Length);
+                    }
+                    else if (ty == typeof(short) || ty == typeof(ushort))
+                    {
+                        var val = GetArrayAsBytes(value, 2);
+                        underlyingStream.Write(val, 0, val.Length);
+                    }
+                    else if (ty == typeof(int) || ty == typeof(uint) || ty == typeof(float))
+                    {
+                        var val = GetArrayAsBytes(value, 4);
+                        underlyingStream.Write(val, 0, val.Length);
+                    }
+                    else if (ty == typeof(long) || ty == typeof(ulong) || ty == typeof(double))
+                    {
+                        var val = GetArrayAsBytes(value, 8);
+                        underlyingStream.Write(val, 0, val.Length);
+                    }
+                    else if (ty == typeof(string))
+                    {
+                        foreach (string str in value)
+                        {
+                            this.WriteProperty(str, ref RecursivityCount);
+                        }
+                    }
+                    else if (typeof(Type).IsAssignableFrom(ty))
+                    {
+                        foreach (Type t in value)
+                        {
+                            this.WriteProperty(t,ref RecursivityCount);
+                        }
+                    }
+
 
                     foreach (var VARIABLE in value)
                     {
@@ -743,6 +787,14 @@ namespace hlwSerial
                 _stack.Pop();
             }
         }
+
+        private byte[] GetArrayAsBytes(Array a, int sizeOfElement)
+        {
+            byte[] result = new byte[a.Length * sizeOfElement];
+            Buffer.BlockCopy(a, 0, result, 0, result.Length);
+            return result;
+        }
+        
 
         #endregion
 
