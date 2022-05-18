@@ -776,6 +776,13 @@ namespace hlwSerial
                             this.WriteProperty(t,ref RecursivityCount);
                         }
                     }
+                    else if (typeof(ISerializable).IsAssignableFrom(type))
+                    {
+                        foreach (ISerializable ser in value)
+                        {
+                            this.WriteProperty(ser,ref RecursivityCount,SerializeElementsType);
+                        }
+                    }
 
 
                     foreach (var VARIABLE in value)
