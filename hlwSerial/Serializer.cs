@@ -10,7 +10,8 @@ namespace hlwSerial
 {
     public class Serializer : IDisposable
     {
-        //Todo Add support for endianness.
+        //Todo Add support for endianness. (In progress)
+        //Todo Make able to switch between a "CPU Cycle" or a "Memory" Serializer.
         public Serializer(Stream stream,  Endianness endianess = Endianness.Auto)
         {
             this.underlyingStream = stream;
@@ -207,58 +208,50 @@ namespace hlwSerial
             }
             else if (type == typeof(sbyte))
             {
-                underlyingStream.WriteByte(unchecked((byte)(sbyte)value));
+                WriteProperty((sbyte)value, ref RecursivityCount, SerializeType, SerializeElementsType, nullable);
             }
             else if (type == typeof(short))
             {
-                underlyingStream.Write(BitConverter.GetBytes((short)value), 0, 2);
+                WriteProperty((short)value, ref RecursivityCount, SerializeType, SerializeElementsType, nullable);
             }
             else if (type == typeof(ushort))
             {
-                underlyingStream.Write(BitConverter.GetBytes((ushort)value), 0, 2);
+                WriteProperty((ushort)value, ref RecursivityCount, SerializeType, SerializeElementsType, nullable);
             }
             else if (type == typeof(int))
             {
-                underlyingStream.Write(BitConverter.GetBytes((int)value), 0, 4);
+                WriteProperty((int)value, ref RecursivityCount, SerializeType, SerializeElementsType, nullable);
             }
             else if (type == typeof(uint))
             {
-                underlyingStream.Write(BitConverter.GetBytes((uint)value), 0, 4);
+                WriteProperty((uint)value, ref RecursivityCount, SerializeType, SerializeElementsType, nullable);
             }
             else if (type == typeof(long))
             {
-                underlyingStream.Write(BitConverter.GetBytes((long)value), 0, 8);
+                WriteProperty((long)value, ref RecursivityCount, SerializeType, SerializeElementsType, nullable);
             }
             else if (type == typeof(ulong))
             {
-                underlyingStream.Write(BitConverter.GetBytes((ulong)value), 0, 8);
+                WriteProperty((ulong)value, ref RecursivityCount, SerializeType, SerializeElementsType, nullable);
             }
             else if (type == typeof(float))
             {
-                underlyingStream.Write(BitConverter.GetBytes((float)value), 0, 4);
+                WriteProperty((float)value, ref RecursivityCount, SerializeType, SerializeElementsType, nullable);
             }
             else if (type == typeof(double))
             {
-                underlyingStream.Write(BitConverter.GetBytes((double)value), 0, 8);
+                WriteProperty((double)value, ref RecursivityCount, SerializeType, SerializeElementsType, nullable);
             }
             else if (type == typeof(bool))
             {
-                underlyingStream.Write(BitConverter.GetBytes((bool)value), 0, 1);
+                WriteProperty((bool)value, ref RecursivityCount, SerializeType, SerializeElementsType, nullable);
             }
             #endregion
             //? STRING
             #region
             else if (type == typeof(string))
             {
-                var val = (string)value;
-                if (!SerializeType && !nullable)
-                    underlyingStream.Write(BitConverter.GetBytes(val == null), 0, 1);
-                if (val != null)
-                {
-                    var by = Encoding.UTF8.GetBytes(val);
-                    underlyingStream.Write(BitConverter.GetBytes(by.Length), 0, 4);
-                    underlyingStream.Write(by, 0, by.Length);
-                }
+                WriteProperty((string)value, ref RecursivityCount, SerializeType, SerializeElementsType, nullable);
 
             }
             #endregion
@@ -266,47 +259,28 @@ namespace hlwSerial
             #region
             else if (typeof(Type).IsAssignableFrom(type))
             {
-               
-                var val = (Type)value;
-                
 
-                if (!SerializeType && !nullable)
-                    underlyingStream.Write(BitConverter.GetBytes(val == null), 0, 1);
-                if (val != null)
-                {
-                    
+                WriteProperty((Type)value, ref RecursivityCount, SerializeType, SerializeElementsType, nullable);
 
-                    var by = GetTypeString(val);
-                    underlyingStream.Write(by, 0, by.Length);
-                }
-                
-                
+
             }
             else if (typeof(ISerializable).IsAssignableFrom(type))
             {
-                var val = value;
-                if (!SerializeType && !nullable)
-                    underlyingStream.Write(BitConverter.GetBytes(val == null), 0, 1);
-                if (val != null)
-                {
-                    if (_stack.Contains(val))
-                    {
-                        throw new SerializationContainsSameObjectTwiceInTheStack(
-                            $"Object type {type} is serialized inside itself or inside one object it contains.");
-                    }
-                    this.WriteObject(val, ref RecursivityCount, SerializeType);
-
-                }
+                WriteProperty((ISerializable)value, ref RecursivityCount, SerializeType, SerializeElementsType, nullable);
             }
             #endregion reference types
             //?Check for nullable
             //x  Could be deleted?
             #region nullable
-            /*
+            
             else if (type.IsGenericType && typeof(Nullable<>) == type.GetGenericTypeDefinition())
             {
-                
 
+                //!Usually : int? hello = 5 // or int? hello = null // Won't be typeof(int?), they will either be int or null types. 
+                //!But we didn't check for int?[] and List<int?> serialization
+                //todo Make a lot of tests to make sure there is never a serialization that asks for nullable<T> type.
+                throw new NotImplementedException($"Trying to serialize a nullable<T> object !! type = {type.GetShortTypeName(true)}");
+                /*
                 var TT = Nullable.GetUnderlyingType(type);
                 if (TT == typeof(byte))
                 {
@@ -396,93 +370,23 @@ namespace hlwSerial
                     if (val.HasValue)
                         this.WriteProperty(val.Value);
                 }
-            }*/
+                */
+            }
             #endregion nullable
             //? COLLECTIONS
             #region collections
             else if (typeof(Array).IsAssignableFrom(type))
             {
-                var val = value as Array;
-                if (!SerializeType && !nullable)
-                    underlyingStream.Write(BitConverter.GetBytes(val == null), 0, 1);
-                if (val != null)
-                {
-                    if (_stack.Contains(val))
-                    {
-                        throw new SerializationContainsSameObjectTwiceInTheStack(
-                            $"Object type {type} is serialized inside itself or inside one object it contains.");
-                    }
-                    _stack.Push(val);
-                    var ty = type.GetElementType();
-                    if (ty != null)
-                    {
-                        this.WriteProperty(val.Length, ref RecursivityCount);
-                        foreach (var VARIABLE in val)
-                        {
-                            this.WriteProperty(VARIABLE, ref RecursivityCount, SerializeElementsType);
-                        }
-                    }
-
-                    _stack.Pop();
-                }
+                WriteProperty((Array)value, ref RecursivityCount, SerializeType, SerializeElementsType, nullable);
             }
             else if (type.IsGenericType && typeof(List<>) == type.GetGenericTypeDefinition())
             {
-                var val = value as IList;
-                if (!SerializeType && !nullable)
-                    this.WriteProperty(val == null, ref RecursivityCount);
-                if (val != null)
-                {
-                    if (_stack.Contains(val))
-                    {
-                        throw new SerializationContainsSameObjectTwiceInTheStack(
-                            $"Object type {type} is serialized inside itself or inside one object it contains.");
-                    }
-                    _stack.Push(val);
-                    this.WriteProperty(val.Count, ref RecursivityCount);
-                    var ty = type.GetGenericArguments()[0];
-                    if (ty != null)
-                    {
-                        foreach (var VARIABLE in val)
-                        {
-                            this.WriteProperty(VARIABLE, ref RecursivityCount, SerializeElementsType);
-                        }
-                    }
+                WriteProperty((IList)value, ref RecursivityCount, SerializeType, SerializeElementsType, nullable);
 
-                    _stack.Pop();
-                }
-
-                
             }
             else if (type.IsGenericType && typeof(Dictionary<,>) == type.GetGenericTypeDefinition())
             {
-                var val = value as IDictionary;
-                if (!SerializeType && !nullable)
-                    this.WriteProperty(val == null, ref RecursivityCount);
-                if (val != null)
-                {
-                    if (_stack.Contains(val))
-                    {
-                        throw new SerializationContainsSameObjectTwiceInTheStack(
-                            $"Object type {type} is serialized inside itself or inside one object it contains.");
-                    }
-                    _stack.Push(val);
-                    this.WriteProperty(val.Count, ref RecursivityCount);
-                    var ty1 = type.GetGenericArguments()[0];
-                    var ty2 = type.GetGenericArguments()[1];
-
-
-                        foreach (var VARIABLE in val.Keys)
-                        {
-                            this.WriteProperty(VARIABLE, ref RecursivityCount, SerializeElementsType);
-                        }
-                        foreach (var VARIABLE in val.Values)
-                        {
-                            this.WriteProperty(VARIABLE, ref RecursivityCount, SerializeElementsType);
-                        }
-
-                        _stack.Pop();
-                }
+                WriteProperty((IDictionary)value, ref RecursivityCount, SerializeType, SerializeElementsType, nullable);
             }
 #endregion collections
             
@@ -776,16 +680,22 @@ namespace hlwSerial
                             this.WriteProperty(t,ref RecursivityCount);
                         }
                     }
-                    else if (typeof(ISerializable).IsAssignableFrom(type))
+                    else if (typeof(ISerializable).IsAssignableFrom(ty))
                     {
                         foreach (ISerializable ser in value)
                         {
                             this.WriteProperty(ser,ref RecursivityCount,SerializeElementsType);
                         }
                     }
-
-
-                    foreach (var VARIABLE in value)
+                    else if (ty.IsGenericType && typeof(Nullable<>) == ty.GetGenericTypeDefinition())
+                    {
+                        foreach (object obj in value)
+                        {
+                            this.WriteProperty(obj, ref RecursivityCount, SerializeElementsType, false, true);
+                        }
+                    }
+                    //todo Add direct calls to collection writeProperty
+                    else foreach (object VARIABLE in value)
                     {
                         this.WriteProperty(VARIABLE, ref RecursivityCount, SerializeElementsType);
                     }
@@ -795,10 +705,188 @@ namespace hlwSerial
             }
         }
 
+        //?Lists
+        //!IList must in fact be a generic List<T> !!
+        private void WriteProperty(IList value, ref int RecursivityCount, bool SerializeType = false,
+            bool SerializeElementsType = false, bool nullable = false)
+        {
+            if (!SerializeType && !nullable)
+                this.WriteProperty(value == null, ref RecursivityCount);
+            if (value != null)
+            {
+                if (_stack.Contains(value))
+                {
+                    throw new SerializationContainsSameObjectTwiceInTheStack(
+                        $"Object type {value.GetType()} is serialized inside itself or inside one object it contains.");
+                }
+                _stack.Push(value);
+                this.WriteProperty(value.Count, ref RecursivityCount);
+                var ty = value.GetType().GetGenericArguments()[0];//!Will fail if the list isn't generic
+                if (ty != null)
+                {
+
+                    if (typeof(Array).IsAssignableFrom(ty))
+                    {//x Potential loss of speed as arrays aren't that common and will be tested at first every time
+                        foreach (Array variable in value)
+                        {
+                            this.WriteProperty(variable, ref RecursivityCount, false, SerializeElementsType);
+                        }
+                    }
+                    else if (ty == typeof(byte))
+                    {
+                        underlyingStream.Write((value as List<byte>).ToArray(), 0, value.Count);
+                        
+                    }
+                    else if (ty == typeof(sbyte))
+                    {
+                        var val = GetArrayAsBytes((value as List<sbyte>).ToArray(), 1);
+                        underlyingStream.Write(val, 0, val.Length);
+                    }
+                    else if (ty == typeof(bool))
+                    {
+                        var val = GetArrayAsBytes((value as List<bool>).ToArray(), 1);
+                        underlyingStream.Write(val, 0, val.Length);
+                    }
+                    else if (ty == typeof(short))
+                    {
+                        var val = GetArrayAsBytes((value as List<short>).ToArray(), 2);
+                        underlyingStream.Write(val, 0, val.Length);
+                    }
+                    else if (ty == typeof(ushort))
+                    {
+                        var val = GetArrayAsBytes((value as List<ushort>).ToArray(), 2);
+                        underlyingStream.Write(val, 0, val.Length);
+                    }
+                    else if (ty == typeof(int) )
+                    {
+                        var val = GetArrayAsBytes((value as List<int>).ToArray(), 4);
+                        underlyingStream.Write(val, 0, val.Length);
+                    }
+                    else if (ty == typeof(uint))
+                    {
+                        var val = GetArrayAsBytes((value as List<uint>).ToArray(), 4);
+                        underlyingStream.Write(val, 0, val.Length);
+                    }
+                    else if ( ty == typeof(float))
+                    {
+                        var val = GetArrayAsBytes((value as List<float>).ToArray(), 4);
+                        underlyingStream.Write(val, 0, val.Length);
+                    }
+                    else if (ty == typeof(long))
+                    {
+                        var val = GetArrayAsBytes((value as List<long>).ToArray(), 8);
+                        underlyingStream.Write(val, 0, val.Length);
+                    }
+                    else if (ty == typeof(ulong))
+                    {
+                        var val = GetArrayAsBytes((value as List<ulong>).ToArray(), 8);
+                        underlyingStream.Write(val, 0, val.Length);
+                    }
+                    else if ( ty == typeof(double))
+                    {
+                        var val = GetArrayAsBytes((value as List<double>).ToArray(), 8);
+                        underlyingStream.Write(val, 0, val.Length);
+                    }
+                    else if (ty == typeof(string))
+                    {
+                        foreach (string str in value)
+                        {
+                            this.WriteProperty(str, ref RecursivityCount);
+                        }
+                    }
+                    else if (typeof(Type).IsAssignableFrom(ty))
+                    {
+                        foreach (Type t in value)
+                        {
+                            this.WriteProperty(t, ref RecursivityCount);
+                        }
+                    }
+                    else if (typeof(ISerializable).IsAssignableFrom(ty))
+                    {
+                        foreach (ISerializable ser in value)
+                        {
+                            this.WriteProperty(ser, ref RecursivityCount, SerializeElementsType);
+                        }
+                    }
+                    else if (ty.IsGenericType && typeof(Nullable<>) == ty.GetGenericTypeDefinition())
+                    {
+                        foreach (object obj in value)
+                        {
+                            this.WriteProperty(obj, ref RecursivityCount, SerializeElementsType, false, true);
+                        }
+                    }
+                    //todo Add direct calls to collection writeProperty
+                    else
+                        foreach (object VARIABLE in value)
+                        {
+                            this.WriteProperty(VARIABLE, ref RecursivityCount, SerializeElementsType);
+                        }
+
+                }
+
+                _stack.Pop();
+            }
+
+        }
+
+        //?Dictionarys
+        //!IDictionary must in fact be a generic Dictionary<TKey,TValue> !!
+        //Todo Add direct calls to overloaded and array copy methods.
+        private void WriteProperty(IDictionary value, ref int RecursivityCount, bool SerializeType = false,
+            bool SerializeElementsType = false, bool nullable = false)
+        {
+            if (!SerializeType && !nullable)
+                this.WriteProperty(value == null, ref RecursivityCount);
+            if (value != null)
+            {
+                if (_stack.Contains(value))
+                {
+                    throw new SerializationContainsSameObjectTwiceInTheStack(
+                        $"Object type {value.GetType()} is serialized inside itself or inside one object it contains.");
+                }
+
+                _stack.Push(value);
+                this.WriteProperty(value.Count, ref RecursivityCount);
+                var type = value.GetType();
+                var ty1 = type.GetGenericArguments()[0];//!Will fail if IDictionary isn't typeof(Dictionary<TKey,TValue>) !!
+                var ty2 = type.GetGenericArguments()[1];
+
+
+                var nl1 = ty1.IsGenericType && typeof(Nullable<>) == ty1.GetGenericTypeDefinition();
+                var nl2 = ty2.IsGenericType && typeof(Nullable<>) == ty2.GetGenericTypeDefinition();
+                foreach (var VARIABLE in value.Keys)
+                {
+                    
+                    this.WriteProperty(VARIABLE, ref RecursivityCount, SerializeElementsType,SerializeElementsType,nl1);
+                }
+                foreach (var VARIABLE in value.Values)
+                {
+                    this.WriteProperty(VARIABLE, ref RecursivityCount, SerializeElementsType, SerializeElementsType, nl1);
+                }
+
+                _stack.Pop();
+            }
+        }
+
+        //todo propose to use permutation to reverse endianness instead of creating a new array (more CPU cycles, less memory).
         private byte[] GetArrayAsBytes(Array a, int sizeOfElement)
         {
             byte[] result = new byte[a.Length * sizeOfElement];
             Buffer.BlockCopy(a, 0, result, 0, result.Length);
+            if (ReversedEndianess && sizeOfElement > 1)
+            {
+                byte[] reversed = new byte[result.Length];
+
+                for (int i = 0; i < result.Length / sizeOfElement; i++)
+                {
+                    for (int j = 0; j < sizeOfElement; j++)
+                    {
+                        reversed[(i * sizeOfElement) + j] = result[(i * sizeOfElement) + (sizeOfElement - (j + 1))];
+                    }
+                }
+
+                return reversed;
+            }
             return result;
         }
         
@@ -1102,7 +1190,16 @@ namespace hlwSerial
                     var ty = T.GetElementType();
                     if (ty == null) return null;
 
-                    var array = Array.CreateInstance(T.GetElementType(), this.ReadProperty<int>());
+                    var Rank = this.ReadProperty<byte>();
+                    int[] levels = new int[Rank];
+                    for (int i = 0; i < Rank; i++)
+                    {
+                        levels[i] = this.ReadProperty<int>();
+                    }
+                    var array = Array.CreateInstance(T.GetElementType(),levels);
+
+
+                    //TODO IMPLEMENT FOR MULTIDIMENSIONNAL ARRAYS
                     for (int i = 0; i < array.Length; i++)
                     {
                         array.SetValue(this.ReadProperty(ty,DeserializeElementsType),i);

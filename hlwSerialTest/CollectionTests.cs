@@ -37,15 +37,6 @@ namespace hlwSerialTest
     [TestClass]
     public class CollectionTests
     {
-        [TestMethod]
-        public void ListIsAssignable()
-        {
-            
-
-            Assert.IsTrue(typeof(List<>) == typeof(List<int>).GetGenericTypeDefinition());
-
-            
-        }
 
         [TestMethod]
         public void intArrayTest()
@@ -61,7 +52,7 @@ namespace hlwSerialTest
 
             var b2 = serializer.Read<fooArray>();
 
-            Assert.AreEqual(true, c.array[0] == 1 && c.array[1] == 2 && c.array[2] == 3);
+            Assert.AreEqual(true, b2.array[0] == 1 && b2.array[1] == 2 && b2.array[2] == 3);
         }
 
         [TestMethod]
