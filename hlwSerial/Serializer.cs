@@ -10,8 +10,10 @@ namespace hlwSerial
 {
     public class Serializer : IDisposable
     {
-        //Todo Add support for endianness. (In progress)
+        // todo Add support for endianness. (In progress)
         //Todo Make able to switch between a "CPU Cycle" or a "Memory" Serializer.
+
+        //ctor 
         public Serializer(Stream stream,  Endianness endianess = Endianness.Auto)
         {
             this.underlyingStream = stream;
@@ -20,19 +22,20 @@ namespace hlwSerial
                                      (!BitConverter.IsLittleEndian && endianess == Endianness.LittleEndian);
         }
 
-        //? Work byte arrays
+
+
+
+        //?? Properties and fields
         #region
+        //? Work byte arrays
+        //! do not use one serializer with two threads at the same time !!
         private readonly byte[] Size8 = new byte[8];
         private readonly byte[] Size4 = new byte[4];
         private readonly byte[] Size2 = new byte[2];
         private readonly byte[] Size1 = new byte[1];
 
-        
-        #endregion
 
-        //?=================
-        //?Properties and fields
-        #region
+        //? stream zone
         /// <summary>
         /// The stream used by the serializer.
         /// </summary>
@@ -53,16 +56,21 @@ namespace hlwSerial
             }
         }
         
+        //? recursivity zone
+        //! Stack must be cleared before starting to write any object
         private Stack<object> _stack = new Stack<object>();
-
+        /// <summary>
+        /// The max depth of rabbit hole the serializer can go when serializing serializable objects inside serializable objects.
+        /// </summary>
         public int MaxRecursivity = 100;
 
+        //? Endianness zone
         public readonly Endianness Endianess;
         public readonly bool ReversedEndianess;
         #endregion
 
 
-        //? PropertyInfos and type handling.
+        //?? PropertyInfos and type handling
         #region
         private static Dictionary<Type,CustomPropertyInfo[]> infos = new Dictionary<Type,CustomPropertyInfo[]>();
 
@@ -106,8 +114,7 @@ namespace hlwSerial
         #endregion
 
 
-        //?===============
-        //?WRITING
+        //?? WRITING
         //todo add Datetime
         #region
 
@@ -176,6 +183,7 @@ namespace hlwSerial
             var type = value == null ? null : value.GetType();
             if (SerializeType)
             {
+                
                 //todo rewrite this mess
                 if(type!=null)
                     WriteProperty(type, ref RecursivityCount);
@@ -396,7 +404,7 @@ namespace hlwSerial
         //? Each of writing Methods
 
         #region
-        //?byte
+        //? byte
         private void WriteProperty(byte value, ref int RecursivityCount, bool SerializeType = false,
             bool SerializeElementsType = false, bool nullable = false)
         {
@@ -407,7 +415,7 @@ namespace hlwSerial
         {
             underlyingStream.WriteByte(unchecked((byte)value));
         }
-        //?short
+        //? short
         private void WriteProperty(short value, ref int RecursivityCount, bool SerializeType = false,
             bool SerializeElementsType = false, bool nullable = false)
         {
@@ -438,7 +446,7 @@ namespace hlwSerial
                 underlyingStream.Write(BitConverter.GetBytes((ushort)value), 0, 2);
             }
         }
-        //?int
+        //? int
         private void WriteProperty(int value, ref int RecursivityCount, bool SerializeType = false,
             bool SerializeElementsType = false, bool nullable = false)
         {
@@ -473,7 +481,7 @@ namespace hlwSerial
                 underlyingStream.Write(BitConverter.GetBytes((uint)value), 0, 4);
             }
         }
-        //?long
+        //? long
         private void WriteProperty(long value, ref int RecursivityCount, bool SerializeType = false,
             bool SerializeElementsType = false, bool nullable = false)
         {
@@ -516,7 +524,7 @@ namespace hlwSerial
                 underlyingStream.Write(BitConverter.GetBytes((ulong)value), 0, 8);
             }
         }
-        //?float
+        //? float
         private void WriteProperty(float value, ref int RecursivityCount, bool SerializeType = false,
             bool SerializeElementsType = false, bool nullable = false)
         {
@@ -555,13 +563,13 @@ namespace hlwSerial
                 underlyingStream.Write(BitConverter.GetBytes((double)value), 0, 8);
             }
         }
-        //?bool
+        //? bool
         private void WriteProperty(bool value, ref int RecursivityCount, bool SerializeType = false,
             bool SerializeElementsType = false, bool nullable = false)
         {
             underlyingStream.WriteByte(BitConverter.GetBytes(value)[0]);
         }
-        //?string
+        //? string
         private void WriteProperty(string value, ref int RecursivityCount, bool SerializeType = false,
             bool SerializeElementsType = false, bool nullable = false)
         {
@@ -574,7 +582,7 @@ namespace hlwSerial
                 underlyingStream.Write(by, 0, by.Length);
             }
         }
-        //?Type
+        //? Type
         private void WriteProperty(Type value, ref int RecursivityCount, bool SerializeType = false,
             bool SerializeElementsType = false, bool nullable = false)
         {
@@ -587,7 +595,7 @@ namespace hlwSerial
                 underlyingStream.Write(by, 0, by.Length);
             }
         }
-        //?ISerializable
+        //? ISerializable
         private void WriteProperty(ISerializable value, ref int RecursivityCount, bool SerializeType = false,
             bool SerializeElementsType = false, bool nullable = false)
         {
@@ -605,7 +613,7 @@ namespace hlwSerial
 
             }
         }
-        //?Arrays
+        //? Arrays
         private void WriteProperty(Array value, ref int RecursivityCount, bool SerializeType = false,
             bool SerializeElementsType = false, bool nullable = false)
         {
@@ -625,7 +633,7 @@ namespace hlwSerial
                 if (ty != null)
                 {
                     this.WriteProperty((byte)value.Rank,ref RecursivityCount);//Handle multiDimensionnalArray
-                    for (int i = 0; i < value.Rank; i++)//!Writing each length of each rank.
+                    for (int i = 0; i < value.Rank; i++)//! Writing each length of each rank.
                     {
                         WriteProperty(value.GetLength(i), ref RecursivityCount);
                     }
@@ -705,8 +713,8 @@ namespace hlwSerial
             }
         }
 
-        //?Lists
-        //!IList must in fact be a generic List<T> !!
+        //? Lists
+        //! IList must in fact be a generic List<T> !!
         private void WriteProperty(IList value, ref int RecursivityCount, bool SerializeType = false,
             bool SerializeElementsType = false, bool nullable = false)
         {
@@ -721,7 +729,7 @@ namespace hlwSerial
                 }
                 _stack.Push(value);
                 this.WriteProperty(value.Count, ref RecursivityCount);
-                var ty = value.GetType().GetGenericArguments()[0];//!Will fail if the list isn't generic
+                var ty = value.GetType().GetGenericArguments()[0];//! Will fail if the list isn't generic
                 if (ty != null)
                 {
 
@@ -829,8 +837,8 @@ namespace hlwSerial
 
         }
 
-        //?Dictionarys
-        //!IDictionary must in fact be a generic Dictionary<TKey,TValue> !!
+        //? Dictionaries
+        //! IDictionary must in fact be a generic Dictionary<TKey,TValue> !!
         //Todo Add direct calls to overloaded and array copy methods.
         private void WriteProperty(IDictionary value, ref int RecursivityCount, bool SerializeType = false,
             bool SerializeElementsType = false, bool nullable = false)
@@ -848,7 +856,7 @@ namespace hlwSerial
                 _stack.Push(value);
                 this.WriteProperty(value.Count, ref RecursivityCount);
                 var type = value.GetType();
-                var ty1 = type.GetGenericArguments()[0];//!Will fail if IDictionary isn't typeof(Dictionary<TKey,TValue>) !!
+                var ty1 = type.GetGenericArguments()[0];//! Will fail if IDictionary isn't typeof(Dictionary<TKey,TValue>) !!
                 var ty2 = type.GetGenericArguments()[1];
 
 
@@ -895,8 +903,7 @@ namespace hlwSerial
 
         #endregion
 
-        //?=============
-        //?READING
+        //?? READING
         //todo add Datetime
         #region
         public object Read( Type T, bool deserializeType = false, bool deserializeElementsType = false)
@@ -1292,7 +1299,7 @@ namespace hlwSerial
 
 
 
-
+        //dispose 
         public void Dispose()
         {
             underlyingStream?.Dispose();

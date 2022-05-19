@@ -11,6 +11,18 @@ namespace hlwSerialTest
 {
     public class TestThings
     {
+        //?? This is a chapter: //??
+        //? this is a zone //?
+        //todo this is a todo //todo
+        //! this is a warning //!
+        //!! this is a super //!!
+        //bug this is a bug //bug
+        //ctor this is a constructor //ctor
+        //dispose dispose is using ctor theme. //dispose
+        //url this is an url //url
+        //guide this is a guide //guide
+        //src this is a source //src
+
         public void Write(object obj)
         {
 
