@@ -401,7 +401,7 @@ namespace hlwSerial
         }
 
 
-        //? Each of writing Methods
+        //?? Each of writing Methods
 
         #region
         //? byte
