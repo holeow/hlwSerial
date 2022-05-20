@@ -74,7 +74,8 @@ namespace hlwSerialTest
             using (var reader = new BinaryReader(stream))
             {
                 reader.BaseStream.Position = 0;
-                
+                bool isnull = reader.ReadBoolean();
+
                 int one = reader.ReadInt32();
                 int two = reader.ReadInt32();
                 Assert.AreEqual(289, one+two);

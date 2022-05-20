@@ -141,6 +141,11 @@ namespace hlwSerial
         /// <param name="serializable">The object to serialize</param>
         private void WriteObject(object serializable,ref int RecursivityCount, bool SerializeType = false, bool SerializeElementsType = false, bool nullable = false)
         {
+            if (serializable == null)
+            {
+                WriteProperty(true, ref RecursivityCount);
+            }
+
             unchecked { RecursivityCount++; }
             if (RecursivityCount > MaxRecursivity)
             {
@@ -150,6 +155,7 @@ namespace hlwSerial
 
             if (serializable is ISerializable ss)//!Only ISerializable properties will have their decorated properties serialized
             {
+                
                 _stack.Push(ss);
 
                 if (serializable is IPrepareSerialization s) s.PrepareSerialization();
@@ -157,6 +163,10 @@ namespace hlwSerial
                 if (SerializeType)
                 {
                     WriteProperty(serializable.GetType(), ref RecursivityCount);
+                }
+                else
+                {
+                     WriteProperty(false, ref RecursivityCount);
                 }
 
                 foreach (var customPropertyInfo in GetPropertiesWithAttribute(serializable.GetType()))
@@ -181,17 +191,7 @@ namespace hlwSerial
             //? Type writing if serializeType
             #region type writing
             var type = value == null ? null : value.GetType();
-            if (SerializeType)
-            {
-                
-                //todo rewrite this mess
-                if(type!=null)
-                    WriteProperty(type, ref RecursivityCount);
-                if(type==null)WriteProperty(true, ref RecursivityCount);
-                if (type == null) return;
-            }
-            else
-            {
+            
 
                 if (value == null)
                 {
@@ -202,7 +202,7 @@ namespace hlwSerial
                 {
                     WriteProperty(false, ref RecursivityCount);
                 }
-            }
+            
             #endregion
 
             
@@ -600,8 +600,6 @@ namespace hlwSerial
             bool SerializeElementsType = false, bool nullable = false)
         {
             var val = value;
-            if (!SerializeType && !nullable)
-                underlyingStream.Write(BitConverter.GetBytes(val == null), 0, 1);
             if (val != null)
             {
                 if (_stack.Contains(val))
@@ -622,6 +620,8 @@ namespace hlwSerial
 
             if (value != null)
             {
+                
+
                 var type = value.GetType();
                 if (_stack.Contains(value))
                 {
@@ -925,6 +925,8 @@ namespace hlwSerial
                 }
                 else
                 {
+                    var isNull = ReadProperty<bool>();
+                    if (isNull) return null;
                     inst = Activator.CreateInstance(T);
                 }
                 foreach (var customPropertyInfo in GetPropertiesWithAttribute(inst.GetType()))
@@ -955,15 +957,7 @@ namespace hlwSerial
 
         public object ReadProperty(Type T, bool DeserializeType = false, bool DeserializeElementsType = false)
         {
-            //?Deserialize type
-            #region 
-            if (DeserializeType)
-            {
-                var newType = ReadProperty<Type>();
-                if (newType == null || !T.IsAssignableFrom(newType)) return null;
-                else T = newType;
-            }
-            #endregion
+         
             //?PRIMARY TYPE
             #region
             if (T == typeof(byte))
@@ -1087,43 +1081,28 @@ namespace hlwSerial
                     {
                         var by = new byte[size];
                         underlyingStream.Read(by, 0, size);
-                        return Type.GetType( Encoding.UTF8.GetString(by));
+                        var type = Type.GetType(Encoding.UTF8.GetString(by));
+                        Console.WriteLine($"Type deserialization: {type}");
+                        return type;
                     }
                 }
             }
             else if (typeof(ISerializable).IsAssignableFrom(T))
             {
-                bool isNull;
-                if (!DeserializeType)
-                {
-                    underlyingStream.Read(Size1, 0, 1);
-                    isNull = BitConverter.ToBoolean(Size1, 0);
-                }
-                else
-                {
-                    isNull = false;
-                }
-                if (isNull) return null;
-                else
-                {
+                
+                
+                
                     return this.Read(T,DeserializeType);
-                }
+                
             }
             #endregion
             //?Nullable
             #region
             else if (T.IsGenericType && typeof(Nullable<>) == T.GetGenericTypeDefinition())
             {
-                bool isNull;
-                if (!DeserializeType)
-                {
-                    underlyingStream.Read(Size1, 0, 1);
-                    isNull = BitConverter.ToBoolean(Size1, 0);
-                }
-                else
-                {
-                    isNull = false;
-                }
+                
+                bool isNull = ReadProperty<bool>();
+                Console.WriteLine($"Trying to read nullable {T} ... is null: {isNull}");
                 if (isNull) return null;
                 else
                 {
@@ -1216,16 +1195,7 @@ namespace hlwSerial
             }
             else if (T.IsGenericType && typeof(List<>) == T.GetGenericTypeDefinition())
             {
-                bool isNull;
-                if (!DeserializeType)
-                {
-                    underlyingStream.Read(Size1, 0, 1);
-                    isNull = BitConverter.ToBoolean(Size1, 0);
-                }
-                else
-                {
-                    isNull = false;
-                }
+                bool isNull = Read<bool>();
                 if (isNull) return null;
                 else
                 {

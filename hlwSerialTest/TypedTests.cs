@@ -63,6 +63,9 @@ namespace hlwSerialTest
             ser.Write(one,true);
             ser.Position = 0;
 
+    
+
+
             foox x = ser.Read<foox>(true);
             Trace.WriteLine($"x is null ? {x==null}");
             Assert.AreEqual(typeof(fooOne),x.GetType());
@@ -77,19 +80,19 @@ namespace hlwSerialTest
 
             fooOne one = new fooOne();
             one.integer = 4;
-            one.integuru = 8;
+            one.integuru = 9;
             one.ty = typeof(foox);
             fooTyped typed = new fooTyped();
             typed.foo = one;
             typed.integer = 8;
             fooTwo two = new fooTwo() {integer = 130, nullable = 80};
-            fooTwo three = new fooTwo() { integer = 130, nullable = null };
+            fooTwo three = new fooTwo() { integer = 130, nullable = 16 };
             fooOne four = new fooOne() { integer = 90,integuru=15,ty = typeof(int)};
             fooTwo five = new fooTwo() { integer = 99, nullable = 55 };
             fooOne six = new fooOne() { integer = 90, integuru = 15, ty = null };
             fooTwo seven = new fooTwo() { integer = 99, nullable = 112 };
 
-            typed.list = new List<foox> {one, two, three, four, five, six, seven};
+            typed.list = new List<foox> { two, three, four, five, six, seven};
 
 
             Serializer ser = new Serializer(stream);
@@ -97,10 +100,51 @@ namespace hlwSerialTest
             ser.Write(typed, true);
             ser.Position = 0;
 
+            
+           /*
+            //? fooTyped
+            Type u = ser.Read<Type>();
+            Console.WriteLine(u);
+            int i = ser.Read<int>();
+            Console.WriteLine(i);
 
+            //? foo
+            u = ser.Read<Type>();
+            Console.WriteLine(u);
+            i = ser.Read<int>();
+            Console.WriteLine(i);
+
+            i = ser.Read<int>();
+            Console.WriteLine(i);
+
+
+            u = ser.Read<Type>();
+            Console.WriteLine(u);
+
+            //? list
+
+            var b = ser.Read<bool>();
+            Console.WriteLine(b);
+            i = ser.Read<int>();
+            Console.WriteLine(i);
+
+            Console.WriteLine("=====");
+            u = ser.Read<Type>();
+            Console.WriteLine(u);
+            i = ser.Read<int>();
+            Console.WriteLine(i);
+
+            b = ser.Read<bool>();
+            Console.WriteLine(b);
+            i = ser.Read<int>();
+            Console.WriteLine(i);
+
+            */
             fooTyped typed2 = ser.Read<fooTyped>(true);
+            Console.WriteLine(typed2 == null);
+            Console.WriteLine(typed2.list == null);
 
-            Assert.AreEqual(typeof(int), (typed2.list[3] as fooOne).ty);
+            Assert.AreEqual(typeof(int), (typed2.list[2] as fooOne).ty);
         }
 
         [TestMethod]
@@ -116,7 +160,7 @@ namespace hlwSerialTest
             typed.foo = one;
             typed.integer = 8;
             fooTwo two = new fooTwo() { integer = 130, nullable = 80 };
-            fooTwo three = new fooTwo() { integer = 130, nullable = null };
+            fooTwo three = new fooTwo() { integer = 130, nullable = 0 };
             fooOne four = new fooOne() { integer = 90, integuru = 15, ty = typeof(int) };
             fooTwo five = new fooTwo() { integer = 99, nullable = 55 };
             fooOne six = new fooOne() { integer = 90, integuru = 15, ty = null };
@@ -149,7 +193,7 @@ namespace hlwSerialTest
             typed.foo = one;
             typed.integer = 8;
             fooTwo two = new fooTwo() { integer = 130, nullable = 80 };
-            fooTwo three = new fooTwo() { integer = 130, nullable = null };
+            fooTwo three = new fooTwo() { integer = 130, nullable = 0 };
             fooOne four = new fooOne() { integer = 90, integuru = 15, ty = typeof(int) };
             fooTwo five = new fooTwo() { integer = 99, nullable = 55 };
             fooOne six = new fooOne() { integer = 90, integuru = 15, ty = null };
@@ -183,7 +227,7 @@ namespace hlwSerialTest
             typed.foo = one;
             typed.integer = 8;
             fooTwo two = new fooTwo { integer = 130, nullable = 80 };
-            fooTwo three = new fooTwo { integer = 130, nullable = null };
+            fooTwo three = new fooTwo { integer = 130, nullable = 0 };
             fooOne four = new fooOne { integer = 90, integuru = 15, ty = typeof(int) };
             fooTwo five = new fooTwo { integer = 99, nullable = 55 };
             fooOne six = new fooOne { integer = 90, integuru = 15, ty = null };
@@ -219,7 +263,7 @@ namespace hlwSerialTest
             typed.foo = one;
             typed.integer = 8;
             fooTwo two = new fooTwo() { integer = 130, nullable = 80 };
-            fooTwo three = new fooTwo() { integer = 130, nullable = null };
+            fooTwo three = new fooTwo() { integer = 130, nullable = 0 };
             fooOne four = new fooOne() { integer = 90, integuru = 15, ty = typeof(int) };
             fooTwo five = new fooTwo() { integer = 99, nullable = 55 };
             fooOne six = new fooOne() { integer = 90, integuru = 15, ty = null };
@@ -234,6 +278,14 @@ namespace hlwSerialTest
 
             ser.Position = 0;
 
+            //bug not working
+            //? 
+            Type ty = ser.Read<Type>();
+            Console.WriteLine(ty);
+            var i = ser.Read<int>();
+            Console.WriteLine(i);
+            var foo = ser.Read<foox>(true);
+            Console.WriteLine(foo.integer);
 
             fooTyped typed2 = ser.Read<fooTyped>(true);
 

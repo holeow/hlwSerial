@@ -52,6 +52,12 @@ namespace hlwSerialTest
             Serializer ser = new Serializer(s);
             ser.Write(b);
             s.Position = 0;
+
+            Console.WriteLine(ser.underlyingStream.Length);
+
+     
+
+
             var b2 = ser.Read<bigfoo>();
             Assert.AreEqual(33.3f,b2.f.r);
         }
