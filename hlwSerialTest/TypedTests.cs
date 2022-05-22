@@ -280,6 +280,7 @@ namespace hlwSerialTest
 
             //bug not working
             //? 
+            /*
             Type ty = ser.Read<Type>();
             Console.WriteLine(ty);
             var i = ser.Read<int>();
@@ -287,6 +288,22 @@ namespace hlwSerialTest
             var foo = ser.Read<foox>(true);
             Console.WriteLine(foo.integer);
 
+            bool isNull = ser.Read<bool>();
+            Console.WriteLine(ty);
+             i = ser.Read<int>();
+            Console.WriteLine(i);
+
+            Console.WriteLine("===============");
+            for (int j = 0; j < 4; j++)
+            {
+                foox f = ser.Read<foox>(true);
+                Console.WriteLine(f.GetType());
+            }
+
+            Console.WriteLine("C2======================");
+            foox fx = ser.Read<foox>(true);
+            Console.WriteLine(fx == null);
+            */
             fooTyped typed2 = ser.Read<fooTyped>(true);
 
             Assert.AreEqual(null,typed2.list[4]);

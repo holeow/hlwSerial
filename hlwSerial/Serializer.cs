@@ -610,6 +610,10 @@ namespace hlwSerial
                 this.WriteObject(val, ref RecursivityCount, SerializeType);
 
             }
+            else
+            {
+                WriteProperty(true, ref RecursivityCount);
+            }
         }
         //? Arrays
         private void WriteProperty(Array value, ref int RecursivityCount, bool SerializeType = false,
@@ -1082,7 +1086,6 @@ namespace hlwSerial
                         var by = new byte[size];
                         underlyingStream.Read(by, 0, size);
                         var type = Type.GetType(Encoding.UTF8.GetString(by));
-                        Console.WriteLine($"Type deserialization: {type}");
                         return type;
                     }
                 }
@@ -1102,7 +1105,6 @@ namespace hlwSerial
             {
                 
                 bool isNull = ReadProperty<bool>();
-                Console.WriteLine($"Trying to read nullable {T} ... is null: {isNull}");
                 if (isNull) return null;
                 else
                 {
