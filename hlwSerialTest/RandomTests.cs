@@ -22,7 +22,7 @@ namespace hlwSerialTest
         //url this is an url //url
         //guide this is a guide //guide
         //src this is a source //src
-        //debug this is a debug
+        //debug this is a debug //debug
 
         public void Write(object obj)
         {
