@@ -284,8 +284,8 @@ namespace hlwSerial
             else if (type.IsGenericType && typeof(Nullable<>) == type.GetGenericTypeDefinition())
             {
 
-                //!Usually : int? hello = 5 // or int? hello = null // Won't be typeof(int?), they will either be int or null types. 
-                //!But we didn't check for int?[] and List<int?> serialization
+                //! Usually : int? hello = 5 // or int? hello = null // Won't be typeof(int?), they will either be int or null types. 
+                //! But we didn't check for int?[] and List<int?> serialization
                 //todo Make a lot of tests to make sure there is never a serialization that asks for nullable<T> type.
                 throw new NotImplementedException($"Trying to serialize a nullable<T> object !! type = {type.GetShortTypeName(true)}");
                 /*
