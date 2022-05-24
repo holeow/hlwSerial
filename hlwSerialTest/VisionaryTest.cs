@@ -25,7 +25,7 @@ namespace hlwSerialTest
         public IVisionary<Mainfoo> Visionary
         {
             get  => ForceVisionary!= null ? ForceVisionary : new mc2(this);
-            //debug in production: only use the last visionary version (here mc2)
+            //debug (in production just return the last visionary version (here mc2))
             set => value.ApplyVision(this);
         }
 
